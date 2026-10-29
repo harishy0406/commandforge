@@ -1,0 +1,57 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.backend
+    container_name: commandforge-backend
+    ports:
+      - "8080:8080"
+    environment:
+      - COMMANDFORGE_HOST=0.0.0.0
+      - COMMANDFORGE_PORT=8080
+      - COMMANDFORGE_DB_PATH=/data/commandforge.db
+      - COMMANDFORGE_AI_PROVIDER=mock
+      - COMMANDFORGE_EXECUTION_ADAPTER=docker
+      - COMMANDFORGE_DOCKER_IMAGE=commandforge-sandbox:latest
+      - COMMANDFORGE_EXECUTION_TIMEOUT_SECONDS=10
+      - COMMANDFORGE_MAX_OUTPUT_BYTES=65536
+    volumes:
+      - commandforge-data:/data
+      - /var/run/docker.sock:/var/run/docker.sock
+    restart: unless-stopped
+    networks:
+      - commandforge-net
+
+  frontend:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.frontend
+    container_name: commandforge-frontend
+    ports:
+      - "3000:80"
+    environment:
+      - VITE_API_BASE_URL=http://localhost:8080/api
+    depends_on:
+      - backend
+    restart: unless-stopped
+    networks:
+      - commandforge-net
+
+  sandbox-image-builder:
+    build:
+      context: docker/execution
+      dockerfile: Dockerfile
+    image: commandforge-sandbox:latest
+    container_name: commandforge-sandbox-image
+    entrypoint: ["echo", "CommandForge Sandbox Image Built Successfully"]
+    networks:
+      - commandforge-net
+
+volumes:
+  commandforge-data:
+
+networks:
+  commandforge-net:
+    driver: bridge

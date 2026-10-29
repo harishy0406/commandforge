@@ -1,0 +1,69 @@
+name: CommandForge CI
+
+on:
+  push:
+    branches: [ main, dev ]
+  pull_request:
+    branches: [ main, dev ]
+
+jobs:
+  backend-build-and-test:
+    name: C++20 Backend Build & Tests
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y cmake ninja-build libsqlite3-dev libcurl4-openssl-dev
+
+      - name: Configure CMake
+        run: |
+          cmake -B backend/build -S backend \
+            -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCOMMANDFORGE_BUILD_TESTS=ON
+
+      - name: Build C++ Backend
+        run: cmake --build backend/build -j$(nproc)
+
+      - name: Run C++ Unit & Integration Tests
+        run: ctest --test-dir backend/build --output-on-failure
+
+  frontend-build-and-lint:
+    name: React Frontend Build & Typecheck
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install Frontend Dependencies
+        working-directory: apps/web
+        run: npm ci
+
+      - name: Typecheck and Build
+        working-directory: apps/web
+        run: npm run build
+
+  docker-build:
+    name: Docker Multi-Stage Verification
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Build Sandbox Image
+        run: docker build -t commandforge-sandbox:latest -f docker/execution/Dockerfile docker/execution
+
+      - name: Build Backend Image
+        run: docker build -t commandforge-backend:latest -f docker/Dockerfile.backend .
+
+      - name: Build Frontend Image
+        run: docker build -t commandforge-frontend:latest -f docker/Dockerfile.frontend .

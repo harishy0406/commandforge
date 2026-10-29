@@ -1,0 +1,363 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "CommandForge REST API",
+    "version": "1.0.0",
+    "description": "Secure, AI-powered Linux terminal assistant and execution isolation engine."
+  },
+  "servers": [
+    {
+      "url": "http://localhost:8080/api",
+      "description": "Local development server"
+    }
+  ],
+  "paths": {
+    "/health": {
+      "get": {
+        "summary": "Check backend health status",
+        "responses": {
+          "200": {
+            "description": "System is healthy",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": { "type": "string", "example": "healthy" },
+                    "timestamp": { "type": "string" },
+                    "version": { "type": "string", "example": "1.0.0" },
+                    "execution_adapter": { "type": "string", "example": "docker" },
+                    "ai_provider": { "type": "string", "example": "mock" }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/dashboard/summary": {
+      "get": {
+        "summary": "Retrieve overall dashboard metrics",
+        "responses": {
+          "200": {
+            "description": "Summary statistics",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "total_generated": { "type": "integer" },
+                    "total_executed": { "type": "integer" },
+                    "successful_executions": { "type": "integer" },
+                    "failed_executions": { "type": "integer" },
+                    "average_duration_ms": { "type": "number" },
+                    "success_rate": { "type": "number" },
+                    "cpu_usage_pct": { "type": "number" },
+                    "memory_usage_pct": { "type": "number" },
+                    "recent_activity": {
+                      "type": "array",
+                      "items": { "$ref": "#/components/schemas/CommandRecord" }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/commands/generate": {
+      "post": {
+        "summary": "Translate natural language to a validated Linux command",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["prompt"],
+                "properties": {
+                  "prompt": { "type": "string", "example": "Find the 10 largest files in the current directory" },
+                  "context": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Command generated successfully",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/GeneratedCommand" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/commands/validate": {
+      "post": {
+        "summary": "Evaluate security risk and policy constraints for a shell command",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["command"],
+                "properties": {
+                  "command": { "type": "string", "example": "rm -rf /" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Validation result",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ValidationResult" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/commands/execute": {
+      "post": {
+        "summary": "Explicitly execute an approved command inside isolated container",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["command"],
+                "properties": {
+                  "command": { "type": "string" },
+                  "prompt": { "type": "string" },
+                  "risk_level": { "type": "string", "enum": ["low", "medium", "high"] },
+                  "user_approved": { "type": "boolean" },
+                  "timeout_seconds": { "type": "integer" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Execution result",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ExecutionResult" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/commands/history": {
+      "get": {
+        "summary": "List paginated execution records",
+        "parameters": [
+          { "name": "page", "in": "query", "schema": { "type": "integer", "default": 1 } },
+          { "name": "limit", "in": "query", "schema": { "type": "integer", "default": 20 } },
+          { "name": "status", "in": "query", "schema": { "type": "string" } },
+          { "name": "search", "in": "query", "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "History records list",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "records": { "type": "array", "items": { "$ref": "#/components/schemas/CommandRecord" } },
+                    "total": { "type": "integer" },
+                    "page": { "type": "integer" },
+                    "limit": { "type": "integer" }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/commands/history/{id}": {
+      "get": {
+        "summary": "Get specific execution record details",
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/CommandRecord" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/commands/execute/{id}/cancel": {
+      "post": {
+        "summary": "Cancel an active or running command execution",
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": { "type": "string", "example": "cancelled" },
+                    "id": { "type": "string" }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/system/metrics": {
+      "get": {
+        "summary": "Retrieve live system and process metrics",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/SystemMetrics" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/settings": {
+      "get": {
+        "summary": "Get server settings and capabilities",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ServerSettings" }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "summary": "Update mutable server settings",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/ServerSettings" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ServerSettings" }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "GeneratedCommand": {
+        "type": "object",
+        "properties": {
+          "command": { "type": "string" },
+          "explanation": { "type": "string" },
+          "risk_level": { "type": "string", "enum": ["low", "medium", "high"] },
+          "risk_reason": { "type": "string" },
+          "potentially_destructive": { "type": "boolean" },
+          "requires_confirmation": { "type": "boolean" },
+          "suggested_alternatives": { "type": "array", "items": { "type": "string" } }
+        }
+      },
+      "ValidationResult": {
+        "type": "object",
+        "properties": {
+          "is_valid": { "type": "boolean" },
+          "risk_level": { "type": "string", "enum": ["low", "medium", "high"] },
+          "warnings": { "type": "array", "items": { "type": "string" } },
+          "blocked_reasons": { "type": "array", "items": { "type": "string" } },
+          "is_allowed": { "type": "boolean" }
+        }
+      },
+      "ExecutionResult": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "status": { "type": "string", "enum": ["success", "failed", "timeout", "rejected", "cancelled"] },
+          "exit_code": { "type": "integer" },
+          "stdout": { "type": "string" },
+          "stderr": { "type": "string" },
+          "duration_ms": { "type": "number" },
+          "output_truncated": { "type": "boolean" },
+          "executed_at": { "type": "string" },
+          "environment": { "type": "string" }
+        }
+      },
+      "CommandRecord": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "prompt": { "type": "string" },
+          "command": { "type": "string" },
+          "explanation": { "type": "string" },
+          "risk_level": { "type": "string" },
+          "status": { "type": "string" },
+          "exit_code": { "type": "integer" },
+          "stdout": { "type": "string" },
+          "stderr": { "type": "string" },
+          "duration_ms": { "type": "number" },
+          "created_at": { "type": "string" }
+        }
+      },
+      "SystemMetrics": {
+        "type": "object",
+        "properties": {
+          "cpu_usage_pct": { "type": "number" },
+          "memory_used_mb": { "type": "number" },
+          "memory_total_mb": { "type": "number" },
+          "memory_usage_pct": { "type": "number" },
+          "disk_used_gb": { "type": "number" },
+          "disk_total_gb": { "type": "number" },
+          "disk_usage_pct": { "type": "number" },
+          "active_processes": { "type": "integer" },
+          "timestamp": { "type": "string" },
+          "metrics_source": { "type": "string", "example": "linux_procfs_or_adapter" }
+        }
+      },
+      "ServerSettings": {
+        "type": "object",
+        "properties": {
+          "ai_provider": { "type": "string" },
+          "ai_model": { "type": "string" },
+          "execution_timeout_seconds": { "type": "integer" },
+          "max_output_bytes": { "type": "integer" },
+          "default_environment": { "type": "string" },
+          "history_retention_days": { "type": "integer" },
+          "monitoring_interval_ms": { "type": "integer" }
+        }
+      }
+    }
+  }
+}

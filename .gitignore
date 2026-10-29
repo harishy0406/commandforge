@@ -1,0 +1,52 @@
+# Build directories
+build/
+bin/
+lib/
+out/
+dist/
+*.o
+*.obj
+*.exe
+*.dll
+*.so
+*.dylib
+*.a
+
+# CMake
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+build/Makefile
+compile_commands.json
+CTestTestfile.cmake
+Testing/
+
+# Node / Frontend
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+dist-ssr/
+*.local
+
+# SQLite databases & logs
+*.db
+*.db-journal
+*.sqlite
+*.sqlite3
+commandforge.db
+logs/
+*.log
+
+# Environment and secrets
+.env
+.env.*.local
+*.pem
+*.key
+
+# IDE and OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

@@ -1,0 +1,57 @@
+# Multi-stage Dockerfile for CommandForge C++ Backend
+FROM ubuntu:24.04 AS builder
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    cmake \
+    ninja-build \
+    git \
+    libsqlite3-dev \
+    libcurl4-openssl-dev \
+    pkg-config \
+    ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+# Copy backend source
+COPY backend /app/backend
+
+# Configure and compile
+WORKDIR /app/backend/build
+RUN cmake -G Ninja .. \
+    -DCMAKE_BUILD_TYPE=Release \
+    -DCOMMANDFORGE_BUILD_TESTS=ON \
+    && ninja -j$(nproc)
+
+# Run tests during build
+RUN ctest --output-on-failure
+
+# Production runtime stage
+FROM ubuntu:24.04 AS runner
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+RUN apt-get update && apt-get install -y \
+    libsqlite3-0 \
+    libcurl4 \
+    ca-certificates \
+    docker.io \
+    procps \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+RUN mkdir -p /data /workspace /tmp/commandforge_sandbox
+
+COPY --from=builder /app/backend/build/bin/commandforge-server /app/commandforge-server
+COPY --from=builder /app/backend/build/bin/commandforge-tests /app/commandforge-tests
+
+EXPOSE 8080
+
+ENV COMMANDFORGE_HOST=0.0.0.0
+ENV COMMANDFORGE_PORT=8080
+ENV COMMANDFORGE_DB_PATH=/data/commandforge.db
+
+ENTRYPOINT ["/app/commandforge-server"]
