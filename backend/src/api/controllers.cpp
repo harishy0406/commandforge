@@ -1,0 +1,169 @@
+#include "commandforge/api/controllers.hpp"
+#include "commandforge/common/logger.hpp"
+#include <chrono>
+#include <iomanip>
+#include <sstream>
+
+namespace commandforge {
+
+ApiController::ApiController(ServerConfig config,
+                             std::shared_ptr<IHistoryRepository> repository,
+                             std::shared_ptr<IAIProvider> ai_provider,
+                             std::shared_ptr<RiskAnalyzer> risk_analyzer,
+                             std::shared_ptr<ExecutionEngine> execution_engine,
+                             std::shared_ptr<SystemMonitor> system_monitor)
+    : config_(std::move(config)),
+      repository_(std::move(repository)),
+      ai_provider_(std::move(ai_provider)),
+      risk_analyzer_(std::move(risk_analyzer)),
+      execution_engine_(std::move(execution_engine)),
+      system_monitor_(std::move(system_monitor)) {}
+
+static std::string isoTimestamp() {
+    auto now = std::chrono::system_clock::now();
+    auto in_time_t = std::chrono::system_clock::to_time_t(now);
+    std::tm buf;
+#if defined(_WIN32) || defined(_WIN64)
+    localtime_s(&buf, &in_time_t);
+#else
+    localtime_r(&in_time_t, &buf);
+#endif
+    std::ostringstream ss;
+    ss << std::put_time(&buf, "%Y-%m-%dT%H:%M:%SZ");
+    return ss.str();
+}
+
+nlohmann::json ApiController::handleHealth() {
+    return {
+        {"status", "healthy"},
+        {"timestamp", isoTimestamp()},
+        {"version", "1.0.0"},
+        {"execution_adapter", config_.execution_adapter},
+        {"ai_provider", config_.ai_provider}
+    };
+}
+
+nlohmann::json ApiController::handleDashboardSummary() {
+    DashboardSummary summary;
+    if (repository_) {
+        summary = repository_->getSummary();
+    }
+    if (system_monitor_) {
+        SystemMetrics m = system_monitor_->getMetrics();
+        summary.cpu_usage_pct = m.cpu_usage_pct;
+        summary.memory_usage_pct = m.memory_usage_pct;
+    }
+    return summary.toJson();
+}
+
+nlohmann::json ApiController::handleGenerateCommand(const nlohmann::json& requestBody) {
+    if (!requestBody.contains("prompt") || !requestBody["prompt"].is_string()) {
+        return {{"error", "Field 'prompt' is required and must be a string."}};
+    }
+
+    std::string prompt = requestBody["prompt"].get<std::string>();
+    std::string context = requestBody.value("context", "");
+
+    if (prompt.empty()) {
+        return {{"error", "Prompt cannot be empty."}};
+    }
+
+    GeneratedCommand cmd = ai_provider_->generateCommand(prompt, context);
+    return cmd.toJson();
+}
+
+nlohmann::json ApiController::handleValidateCommand(const nlohmann::json& requestBody) {
+    if (!requestBody.contains("command") || !requestBody["command"].is_string()) {
+        return {{"error", "Field 'command' is required and must be a string."}};
+    }
+
+    std::string command = requestBody["command"].get<std::string>();
+    ValidationResult val = risk_analyzer_->validate(command);
+    return val.toJson();
+}
+
+nlohmann::json ApiController::handleExecuteCommand(const nlohmann::json& requestBody) {
+    if (!requestBody.contains("command") || !requestBody["command"].is_string()) {
+        return {{"error", "Field 'command' is required and must be a string."}};
+    }
+
+    ExecutionRequest req;
+    req.command = requestBody["command"].get<std::string>();
+    req.prompt = requestBody.value("prompt", "");
+    req.risk_level = stringToRiskLevel(requestBody.value("risk_level", "low"));
+    req.user_approved = requestBody.value("user_approved", false);
+    req.timeout_seconds = requestBody.value("timeout_seconds", config_.execution_timeout_seconds);
+
+    ExecutionResult result = execution_engine_->execute(req);
+    return result.toJson();
+}
+
+nlohmann::json ApiController::handleGetHistory(int page, int limit, const std::string& status, const std::string& search) {
+    if (page < 1) page = 1;
+    if (limit < 1 || limit > 100) limit = 20;
+
+    int total = 0;
+    std::vector<CommandRecord> records;
+    if (repository_) {
+        records = repository_->getHistory(page, limit, status, search, total);
+    }
+
+    nlohmann::json recordsJson = nlohmann::json::array();
+    for (const auto& r : records) {
+        recordsJson.push_back(r.toJson());
+    }
+
+    return {
+        {"records", recordsJson},
+        {"total", total},
+        {"page", page},
+        {"limit", limit}
+    };
+}
+
+nlohmann::json ApiController::handleGetHistoryById(const std::string& id) {
+    if (repository_) {
+        auto item = repository_->getById(id);
+        if (item) {
+            return item->toJson();
+        }
+    }
+    return {{"error", "Record not found with ID: " + id}};
+}
+
+nlohmann::json ApiController::handleCancelExecution(const std::string& id) {
+    bool cancelled = execution_engine_->cancelExecution(id);
+    return {
+        {"id", id},
+        {"status", cancelled ? "cancelled" : "not_found_or_finished"}
+    };
+}
+
+nlohmann::json ApiController::handleGetSystemMetrics() {
+    if (system_monitor_) {
+        return system_monitor_->getMetrics().toJson();
+    }
+    return {{"error", "System monitor is not active"}};
+}
+
+nlohmann::json ApiController::handleGetSettings() {
+    return config_.toPublicJson();
+}
+
+nlohmann::json ApiController::handleUpdateSettings(const nlohmann::json& requestBody) {
+    if (requestBody.contains("execution_timeout_seconds") && requestBody["execution_timeout_seconds"].is_number_integer()) {
+        config_.execution_timeout_seconds = requestBody["execution_timeout_seconds"].get<int>();
+    }
+    if (requestBody.contains("max_output_bytes") && requestBody["max_output_bytes"].is_number_integer()) {
+        config_.max_output_bytes = requestBody["max_output_bytes"].get<int>();
+    }
+    if (requestBody.contains("history_retention_days") && requestBody["history_retention_days"].is_number_integer()) {
+        config_.history_retention_days = requestBody["history_retention_days"].get<int>();
+    }
+    if (requestBody.contains("monitoring_interval_ms") && requestBody["monitoring_interval_ms"].is_number_integer()) {
+        config_.monitoring_interval_ms = requestBody["monitoring_interval_ms"].get<int>();
+    }
+    return config_.toPublicJson();
+}
+
+} // namespace commandforge
