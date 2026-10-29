@@ -24,7 +24,7 @@ public:
 private:
     std::string db_path_;
     sqlite3* db_{nullptr};
-    std::mutex mutex_;
+    std::recursive_mutex mutex_;
 
     void seedInitialDemoData();
 };

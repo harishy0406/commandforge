@@ -89,6 +89,12 @@ GeneratedCommand MockProvider::generateCommand(const std::string& prompt, const 
         }
     }
 
+    if (cmd.command.empty() && lowerPrompt.find("clean") != std::string::npos && lowerPrompt.find("log") != std::string::npos) {
+        cmd.command = preset_catalog_["clean logs"].command;
+        cmd.explanation = preset_catalog_["clean logs"].explanation;
+        cmd.suggested_alternatives = preset_catalog_["clean logs"].alternatives;
+    }
+
     // Dynamic heuristics if no direct match
     if (cmd.command.empty()) {
         if (lowerPrompt.find("docker") != std::string::npos) {

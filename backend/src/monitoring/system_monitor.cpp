@@ -132,7 +132,7 @@ void SystemMonitor::sampleMemory(double& usedMb, double& totalMb, double& pct) {
 void SystemMonitor::sampleDisk(double& usedGb, double& totalGb, double& pct) {
 #if defined(_WIN32) || defined(_WIN64)
     ULARGE_INTEGER freeBytesAvailable, totalBytes, totalFreeBytes;
-    if (GetDiskFreeSpaceExA("C:\\", &freeBytesAvailable, &totalBytes, &totalFreeBytes)) {
+    if (GetDiskFreeSpaceExA(nullptr, &freeBytesAvailable, &totalBytes, &totalFreeBytes)) {
         totalGb = static_cast<double>(totalBytes.QuadPart) / (1024.0 * 1024.0 * 1024.0);
         double freeGb = static_cast<double>(totalFreeBytes.QuadPart) / (1024.0 * 1024.0 * 1024.0);
         usedGb = totalGb - freeGb;

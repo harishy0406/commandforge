@@ -18,7 +18,7 @@ void RiskAnalyzer::initializeRules() {
     });
 
     rules_.push_back({
-        std::regex(R"((:\(\)\s*\{\s*:\|:&\s*\};:|(\w+)\(\)\s*\{\s*\1\|\1&\s*\};:\1))", std::regex_constants::icase),
+        std::regex(R"((:\(\)\s*\{\s*:\|:&\s*\};:|(\w+)\(\)\s*\{[^\}]*\|[^\}]*&))", std::regex_constants::icase),
         "Fork bomb pattern detected: potential denial-of-service.",
         RiskLevel::High,
         true
@@ -90,8 +90,8 @@ void RiskAnalyzer::initializeRules() {
 
     // Medium Risk Rules (Modifies files, writes or alters environment)
     rules_.push_back({
-        std::regex(R"((>|>>|\bmv\b|\bcp\b|\bchmod\b|\bchown\b|\btar\s+-[a-zA-Z]*x))", std::regex_constants::icase),
-        "Command modifies files, directories, or permissions on the filesystem.",
+        std::regex(R"((>|>>|\bmv\b|\bcp\b|\brm\b|\bchmod\b|\bchown\b|\btar\s+-[a-zA-Z]*x))", std::regex_constants::icase),
+        "Command modifies or deletes files, directories, or permissions on the filesystem.",
         RiskLevel::Medium,
         false
     });

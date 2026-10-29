@@ -18,7 +18,7 @@ SqliteRepository::~SqliteRepository() {
 }
 
 bool SqliteRepository::initialize() {
-    std::lock_guard<std::mutex> lock(mutex_);
+    std::lock_guard<std::recursive_mutex> lock(mutex_);
     int rc = sqlite3_open(db_path_.c_str(), &db_);
     if (rc != SQLITE_OK) {
         LOG_ERROR("SqliteRepository", "Failed to open sqlite database at " + db_path_ + ": " + sqlite3_errmsg(db_));
@@ -145,7 +145,7 @@ void SqliteRepository::seedInitialDemoData() {
 }
 
 bool SqliteRepository::saveExecution(const CommandRecord& record) {
-    std::lock_guard<std::mutex> lock(mutex_);
+    std::lock_guard<std::recursive_mutex> lock(mutex_);
     if (!db_) return false;
 
     const char* sql = R"(
@@ -183,7 +183,7 @@ std::vector<CommandRecord> SqliteRepository::getHistory(int page, int limit,
                                                        const std::string& statusFilter,
                                                        const std::string& searchFilter,
                                                        int& totalOut) {
-    std::lock_guard<std::mutex> lock(mutex_);
+    std::lock_guard<std::recursive_mutex> lock(mutex_);
     std::vector<CommandRecord> results;
     totalOut = 0;
     if (!db_) return results;
@@ -262,7 +262,7 @@ std::vector<CommandRecord> SqliteRepository::getHistory(int page, int limit,
 }
 
 std::optional<CommandRecord> SqliteRepository::getById(const std::string& id) {
-    std::lock_guard<std::mutex> lock(mutex_);
+    std::lock_guard<std::recursive_mutex> lock(mutex_);
     if (!db_) return std::nullopt;
 
     const char* sql = "SELECT id, prompt, command, explanation, risk_level, status, "
@@ -297,7 +297,7 @@ std::optional<CommandRecord> SqliteRepository::getById(const std::string& id) {
 }
 
 DashboardSummary SqliteRepository::getSummary() {
-    std::lock_guard<std::mutex> lock(mutex_);
+    std::lock_guard<std::recursive_mutex> lock(mutex_);
     DashboardSummary summary;
     if (!db_) return summary;
 
