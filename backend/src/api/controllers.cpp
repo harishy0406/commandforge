@@ -1,5 +1,7 @@
 #include "commandforge/api/controllers.hpp"
 #include "commandforge/common/logger.hpp"
+#include "commandforge/ai/mock_provider.hpp"
+#include "commandforge/ai/openai_provider.hpp"
 #include <chrono>
 #include <iomanip>
 #include <sstream>
@@ -40,7 +42,9 @@ nlohmann::json ApiController::handleHealth() {
         {"version", "1.0.0"},
         {"execution_adapter", config_.execution_adapter},
         {"docker_available", execution_engine_ ? execution_engine_->isDockerAvailable() : false},
-        {"ai_provider", config_.ai_provider}
+        {"ai_provider", config_.ai_provider},
+        {"ai_model", config_.ai_model},
+        {"has_ai_api_key", !config_.ai_api_key.empty()}
     };
 }
 
@@ -57,6 +61,32 @@ nlohmann::json ApiController::handleDashboardSummary() {
     return summary.toJson();
 }
 
+nlohmann::json ApiController::handleGetAIProviders() {
+    auto presets = getAIProviderPresets();
+    nlohmann::json arr = nlohmann::json::array();
+    for (const auto& p : presets) {
+        arr.push_back(p.toJson());
+    }
+    return {
+        {"active_provider", config_.ai_provider},
+        {"active_model", config_.ai_model},
+        {"active_api_url", config_.ai_api_url},
+        {"has_active_api_key", !config_.ai_api_key.empty()},
+        {"providers", arr}
+    };
+}
+
+void ApiController::reconfigureAIProvider() {
+    if (config_.ai_provider == "mock") {
+        LOG_INFO("ApiController", "Switching active AI provider to Mock / Offline heuristics engine.");
+        ai_provider_ = std::make_shared<MockProvider>();
+    } else {
+        LOG_INFO("ApiController", "Switching active AI provider to " + config_.ai_provider +
+                 " (model: " + config_.ai_model + ", endpoint: " + config_.ai_api_url + ")");
+        ai_provider_ = std::make_shared<OpenAIProvider>(config_.ai_api_key, config_.ai_api_url, config_.ai_model);
+    }
+}
+
 nlohmann::json ApiController::handleGenerateCommand(const nlohmann::json& requestBody) {
     if (!requestBody.contains("prompt") || !requestBody["prompt"].is_string()) {
         return {{"error", "Field 'prompt' is required and must be a string."}};
@@ -70,7 +100,10 @@ nlohmann::json ApiController::handleGenerateCommand(const nlohmann::json& reques
     }
 
     GeneratedCommand cmd = ai_provider_->generateCommand(prompt, context);
-    return cmd.toJson();
+    nlohmann::json res = cmd.toJson();
+    res["provider"] = config_.ai_provider;
+    res["model"] = config_.ai_model;
+    return res;
 }
 
 nlohmann::json ApiController::handleValidateCommand(const nlohmann::json& requestBody) {
@@ -153,6 +186,39 @@ nlohmann::json ApiController::handleGetSettings() {
 }
 
 nlohmann::json ApiController::handleUpdateSettings(const nlohmann::json& requestBody) {
+    bool aiChanged = false;
+
+    if (requestBody.contains("ai_provider") && requestBody["ai_provider"].is_string()) {
+        std::string newProvider = requestBody["ai_provider"].get<std::string>();
+        if (newProvider != config_.ai_provider) {
+            config_.ai_provider = newProvider;
+            aiChanged = true;
+        }
+    }
+    if (requestBody.contains("ai_model") && requestBody["ai_model"].is_string()) {
+        std::string newModel = requestBody["ai_model"].get<std::string>();
+        if (newModel != config_.ai_model) {
+            config_.ai_model = newModel;
+            aiChanged = true;
+        }
+    }
+    if (requestBody.contains("ai_api_url") && requestBody["ai_api_url"].is_string()) {
+        std::string newUrl = requestBody["ai_api_url"].get<std::string>();
+        if (newUrl != config_.ai_api_url) {
+            config_.ai_api_url = newUrl;
+            aiChanged = true;
+        }
+    }
+    if (requestBody.contains("ai_api_key") && requestBody["ai_api_key"].is_string()) {
+        std::string newKey = requestBody["ai_api_key"].get<std::string>();
+        config_.ai_api_key = newKey;
+        aiChanged = true;
+    }
+
+    if (aiChanged) {
+        reconfigureAIProvider();
+    }
+
     if (requestBody.contains("execution_timeout_seconds")) {
         if (!requestBody["execution_timeout_seconds"].is_number_integer()) {
             return {{"error", "execution_timeout_seconds must be an integer"}};

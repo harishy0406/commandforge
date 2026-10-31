@@ -1,10 +1,37 @@
 #pragma once
 
 #include <string>
+#include <vector>
 #include <cstdlib>
 #include <nlohmann/json.hpp>
 
 namespace commandforge {
+
+struct AIProviderPreset {
+    std::string id;
+    std::string name;
+    std::string default_url;
+    std::string default_model;
+    std::vector<std::string> recommended_models;
+    bool requires_api_key;
+    std::string description;
+    std::string key_hint;
+
+    nlohmann::json toJson() const {
+        return {
+            {"id", id},
+            {"name", name},
+            {"default_url", default_url},
+            {"default_model", default_model},
+            {"recommended_models", recommended_models},
+            {"requires_api_key", requires_api_key},
+            {"description", description},
+            {"key_hint", key_hint}
+        };
+    }
+};
+
+std::vector<AIProviderPreset> getAIProviderPresets();
 
 struct ServerConfig {
     std::string host{"0.0.0.0"};
@@ -29,11 +56,23 @@ struct ServerConfig {
     static ServerConfig loadFromEnv();
 
     nlohmann::json toPublicJson() const {
+        std::string maskedKey = "";
+        if (!ai_api_key.empty()) {
+            if (ai_api_key.length() > 8) {
+                maskedKey = ai_api_key.substr(0, 4) + "..." + ai_api_key.substr(ai_api_key.length() - 4);
+            } else {
+                maskedKey = "••••••••";
+            }
+        }
+
         return {
             {"host", host},
             {"port", port},
             {"ai_provider", ai_provider},
             {"ai_model", ai_model},
+            {"ai_api_url", ai_api_url},
+            {"has_ai_api_key", !ai_api_key.empty()},
+            {"ai_api_key_masked", maskedKey},
             {"execution_adapter", execution_adapter},
             {"docker_image", docker_image},
             {"execution_timeout_seconds", execution_timeout_seconds},

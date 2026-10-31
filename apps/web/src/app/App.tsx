@@ -15,6 +15,7 @@ export const App: React.FC = () => {
   const [backendConnected, setBackendConnected] = useState(false);
   const [dockerAvailable, setDockerAvailable] = useState(false);
   const [aiProvider, setAiProvider] = useState('Checking...');
+  const [aiModel, setAiModel] = useState('');
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [selectedRecordId, setSelectedRecordId] = useState<string | null>(null);
 
@@ -25,10 +26,12 @@ export const App: React.FC = () => {
       setBackendConnected(health.status === 'healthy');
       setDockerAvailable(Boolean(health.docker_available));
       setAiProvider(health.ai_provider || 'Mock');
+      setAiModel(health.ai_model || '');
     } catch {
       setBackendConnected(false);
       setDockerAvailable(false);
       setAiProvider('Offline');
+      setAiModel('');
     } finally {
       setIsRefreshing(false);
     }
@@ -70,6 +73,7 @@ export const App: React.FC = () => {
           backendConnected={backendConnected}
           dockerAvailable={dockerAvailable}
           aiProvider={aiProvider}
+          aiModel={aiModel}
           onRefresh={checkHealth}
           onNavigateAssistant={() => setCurrentTab('assistant')}
           isRefreshing={isRefreshing}

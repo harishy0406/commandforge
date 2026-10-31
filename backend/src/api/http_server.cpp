@@ -51,6 +51,11 @@ void HttpServer::setupRoutes() {
         sendJson(res, controller_->handleDashboardSummary());
     });
 
+    // GET /api/ai/providers
+    server_.Get("/api/ai/providers", [this](const httplib::Request&, httplib::Response& res) {
+        sendJson(res, controller_->handleGetAIProviders());
+    });
+
     // POST /api/commands/generate
     server_.Post("/api/commands/generate", [this](const httplib::Request& req, httplib::Response& res) {
         try {

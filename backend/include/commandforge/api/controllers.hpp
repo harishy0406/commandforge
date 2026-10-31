@@ -33,6 +33,9 @@ public:
     nlohmann::json handleGetSystemMetrics();
     nlohmann::json handleGetSettings();
     nlohmann::json handleUpdateSettings(const nlohmann::json& requestBody);
+    nlohmann::json handleGetAIProviders();
+
+    void reconfigureAIProvider();
 
 private:
     ServerConfig config_;

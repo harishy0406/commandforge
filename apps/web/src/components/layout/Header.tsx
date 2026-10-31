@@ -13,6 +13,7 @@ interface HeaderProps {
   backendConnected: boolean;
   dockerAvailable?: boolean;
   aiProvider: string;
+  aiModel?: string;
   onRefresh: () => void;
   onNavigateAssistant: () => void;
   isRefreshing: boolean;
@@ -23,6 +24,7 @@ export const Header: React.FC<HeaderProps> = ({
   backendConnected,
   dockerAvailable = false,
   aiProvider,
+  aiModel,
   onRefresh,
   onNavigateAssistant,
   isRefreshing,
@@ -77,7 +79,8 @@ export const Header: React.FC<HeaderProps> = ({
         <div className="hidden md:flex items-center gap-1.5 rounded-full border border-slate-800 bg-slate-900/60 px-3 py-1 text-xs text-slate-300">
           <Cpu className="h-3.5 w-3.5 text-indigo-400" />
           <span className="font-mono text-slate-400 uppercase text-[10px]">AI:</span>
-          <span className="font-medium text-slate-200">{aiProvider}</span>
+          <span className="font-medium text-slate-200 uppercase">{aiProvider}</span>
+          {aiModel && <span className="text-[10px] text-slate-400 font-mono">({aiModel})</span>}
         </div>
 
         {/* Manual Refresh Button */}

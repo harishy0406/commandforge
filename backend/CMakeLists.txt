@@ -49,7 +49,7 @@ target_link_libraries(commandforge_core PUBLIC
 )
 
 if(WIN32)
-    target_link_libraries(commandforge_core PUBLIC ws2_32 crypt32 psapi)
+    target_link_libraries(commandforge_core PUBLIC ws2_32 crypt32 psapi winhttp)
 else()
     target_link_libraries(commandforge_core PUBLIC pthread dl)
 endif()

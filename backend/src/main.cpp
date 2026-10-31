@@ -68,10 +68,10 @@ int main(int argc, char* argv[]) {
     }
     auto execution_engine = std::make_shared<ExecutionEngine>(repository, execution_policy, docker_adapter);
 
-    // 4. Initialize AI Provider
+    // 4. Initialize AI Provider (Supports Gemini, OpenRouter, NVIDIA, Ollama, Groq, Custom, Mock)
     std::shared_ptr<IAIProvider> ai_provider;
-    if (config.ai_provider == "openai" && !config.ai_api_key.empty()) {
-        LOG_INFO("Main", "Configured OpenAI-compatible LLM provider with model: " + config.ai_model);
+    if (config.ai_provider != "mock") {
+        LOG_INFO("Main", "Configured " + config.ai_provider + " LLM provider with model: " + config.ai_model + " at " + config.ai_api_url);
         ai_provider = std::make_shared<OpenAIProvider>(config.ai_api_key, config.ai_api_url, config.ai_model);
     } else {
         LOG_INFO("Main", "Operating in zero-cost offline Demo Mode using local heuristics and Mock AI provider.");

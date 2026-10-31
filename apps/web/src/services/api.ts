@@ -8,7 +8,8 @@ import {
   HistoryResponse,
   ServerSettings,
   SystemMetrics,
-  ValidationResult
+  ValidationResult,
+  AIProvidersResponse
 } from '../types/api';
 
 const API_BASE = '/api';
@@ -23,6 +24,12 @@ export class ApiService {
   static async getDashboardSummary(): Promise<DashboardSummary> {
     const res = await fetch(`${API_BASE}/dashboard/summary`);
     if (!res.ok) throw new Error(`Failed to load summary: ${res.statusText}`);
+    return res.json();
+  }
+
+  static async getAIProviders(): Promise<AIProvidersResponse> {
+    const res = await fetch(`${API_BASE}/ai/providers`);
+    if (!res.ok) throw new Error(`Failed to load AI providers`);
     return res.json();
   }
 

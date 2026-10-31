@@ -14,6 +14,7 @@ import {
   XCircle,
   HelpCircle,
   StopCircle,
+  Cpu,
 } from 'lucide-react';
 import { GeneratedCommand, ExecutionResult, RiskLevel } from '../types/api';
 import { ApiService } from '../services/api';
@@ -36,7 +37,20 @@ export const CommandAssistantPage: React.FC = () => {
   const [highRiskConfirmed, setHighRiskConfirmed] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Active AI Engine Info
+  const [activeProvider, setActiveProvider] = useState<string>('');
+  const [activeModel, setActiveModel] = useState<string>('');
+
   const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    ApiService.getHealth()
+      .then((h) => {
+        setActiveProvider(h.ai_provider || '');
+        setActiveModel(h.ai_model || '');
+      })
+      .catch(() => {});
+  }, []);
 
   const examplePrompts = [
     { title: 'Largest Files', query: 'Find the 10 largest files in the current directory' },
@@ -100,6 +114,8 @@ export const CommandAssistantPage: React.FC = () => {
       setGenerated(res);
       setEditedCommand(res.command);
       setIsEditing(false);
+      if (res.provider) setActiveProvider(res.provider);
+      if (res.model) setActiveModel(res.model);
     } catch (err: any) {
       setError(err.message || 'Failed to generate command');
     } finally {
@@ -260,12 +276,17 @@ export const CommandAssistantPage: React.FC = () => {
         </div>
 
         {/* Buttons */}
-        <div className="flex items-center justify-between pt-2 border-t border-slate-800">
-          <div className="flex items-center gap-2 text-xs text-slate-400">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 pt-2 border-t border-slate-800">
+          <div className="flex flex-wrap items-center gap-2 text-xs text-slate-400">
             <span className="kbd bg-slate-800 px-1.5 py-0.5 rounded text-[10px] font-mono border border-slate-700">Ctrl+Enter</span>
             <span>to synthesize</span>
+            {activeProvider && (
+              <span className="text-[11px] font-mono text-indigo-400 border-l border-slate-800 pl-2">
+                Active AI: <strong className="uppercase">{activeProvider}</strong> {activeModel ? `(${activeModel})` : ''}
+              </span>
+            )}
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
             {(prompt || generated) && (
               <button
                 onClick={handleClear}
@@ -300,11 +321,16 @@ export const CommandAssistantPage: React.FC = () => {
       {generated && (
         <div className="rounded-2xl border border-slate-800 bg-slate-900/40 p-6 shadow-xl space-y-5 animate-in fade-in duration-300">
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 border-b border-slate-800 pb-4">
-            <div className="flex items-center gap-3">
+            <div className="flex flex-wrap items-center gap-2 sm:gap-3">
               <span className="text-xs font-mono uppercase tracking-wider text-slate-400">
                 Audited Command Spec
               </span>
               {getRiskBadge(generated.risk_level)}
+              {generated.provider && (
+                <span className="rounded-md bg-indigo-500/10 px-2 py-0.5 text-[10px] font-mono text-indigo-300 border border-indigo-500/20">
+                  ⚡ {generated.provider} {generated.model ? `(${generated.model})` : ''}
+                </span>
+              )}
             </div>
             <div className="flex items-center gap-2">
               <button

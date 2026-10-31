@@ -9,6 +9,8 @@ export interface GeneratedCommand {
   potentially_destructive: boolean;
   requires_confirmation: boolean;
   suggested_alternatives: string[];
+  provider?: string;
+  model?: string;
 }
 
 export interface ValidationResult {
@@ -91,6 +93,10 @@ export interface ServerSettings {
   port?: number;
   ai_provider: string;
   ai_model: string;
+  ai_api_url?: string;
+  ai_api_key?: string;
+  has_ai_api_key?: boolean;
+  ai_api_key_masked?: string;
   execution_adapter: string;
   docker_image: string;
   execution_timeout_seconds: number;
@@ -107,4 +113,25 @@ export interface BackendHealth {
   execution_adapter: string;
   docker_available?: boolean;
   ai_provider: string;
+  ai_model?: string;
+  has_ai_api_key?: boolean;
+}
+
+export interface AIProviderPreset {
+  id: string;
+  name: string;
+  default_url: string;
+  default_model: string;
+  recommended_models: string[];
+  requires_api_key: boolean;
+  description: string;
+  key_hint: string;
+}
+
+export interface AIProvidersResponse {
+  active_provider: string;
+  active_model: string;
+  active_api_url: string;
+  has_active_api_key: boolean;
+  providers: AIProviderPreset[];
 }
