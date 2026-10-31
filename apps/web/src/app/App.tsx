@@ -13,6 +13,7 @@ export const App: React.FC = () => {
   const [currentTab, setCurrentTab] = useState<NavItem>('overview');
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [backendConnected, setBackendConnected] = useState(false);
+  const [dockerAvailable, setDockerAvailable] = useState(false);
   const [aiProvider, setAiProvider] = useState('Checking...');
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [selectedRecordId, setSelectedRecordId] = useState<string | null>(null);
@@ -22,9 +23,11 @@ export const App: React.FC = () => {
       setIsRefreshing(true);
       const health = await ApiService.getHealth();
       setBackendConnected(health.status === 'healthy');
+      setDockerAvailable(Boolean(health.docker_available));
       setAiProvider(health.ai_provider || 'Mock');
     } catch {
       setBackendConnected(false);
+      setDockerAvailable(false);
       setAiProvider('Offline');
     } finally {
       setIsRefreshing(false);
@@ -57,6 +60,7 @@ export const App: React.FC = () => {
         isCollapsed={isSidebarCollapsed}
         onToggleCollapse={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
         backendConnected={backendConnected}
+        dockerAvailable={dockerAvailable}
       />
 
       {/* Main Content Area */}
@@ -64,6 +68,7 @@ export const App: React.FC = () => {
         <Header
           currentTab={currentTab}
           backendConnected={backendConnected}
+          dockerAvailable={dockerAvailable}
           aiProvider={aiProvider}
           onRefresh={checkHealth}
           onNavigateAssistant={() => setCurrentTab('assistant')}

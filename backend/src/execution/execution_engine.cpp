@@ -43,8 +43,12 @@ std::string ExecutionEngine::currentTimestamp() {
     return ss.str();
 }
 
+bool ExecutionEngine::isDockerAvailable() const {
+    return docker_adapter_.checkDockerAvailable();
+}
+
 ExecutionResult ExecutionEngine::execute(const ExecutionRequest& request) {
-    std::string execId = generateUuid();
+    std::string execId = request.id.empty() ? generateUuid() : request.id;
     std::string timestamp = currentTimestamp();
 
     // 1. Policy Evaluation

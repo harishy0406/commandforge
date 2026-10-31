@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Sparkles,
   Play,
@@ -8,13 +8,12 @@ import {
   AlertTriangle,
   ShieldCheck,
   ShieldAlert,
-  RotateCcw,
   Terminal,
   Clock,
   CheckCircle2,
   XCircle,
   HelpCircle,
-  ExternalLink,
+  StopCircle,
 } from 'lucide-react';
 import { GeneratedCommand, ExecutionResult, RiskLevel } from '../types/api';
 import { ApiService } from '../services/api';
@@ -26,13 +25,18 @@ export const CommandAssistantPage: React.FC = () => {
   const [isEditing, setIsEditing] = useState(false);
   const [editedCommand, setEditedCommand] = useState('');
   const [copied, setCopied] = useState(false);
+  const [outputCopied, setOutputCopied] = useState(false);
 
   // Execution states
   const [isExecuting, setIsExecuting] = useState(false);
+  const [activeExecutionId, setActiveExecutionId] = useState<string | null>(null);
+  const [isCancelling, setIsCancelling] = useState(false);
   const [executionResult, setExecutionResult] = useState<ExecutionResult | null>(null);
   const [showHighRiskModal, setShowHighRiskModal] = useState(false);
   const [highRiskConfirmed, setHighRiskConfirmed] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const examplePrompts = [
     { title: 'Largest Files', query: 'Find the 10 largest files in the current directory' },
@@ -41,6 +45,46 @@ export const CommandAssistantPage: React.FC = () => {
     { title: 'Clean Old Logs', query: 'Remove all temporary log files older than 7 days' },
     { title: 'Dangerous Root Wipe (Blocked)', query: 'Recursively force delete system root directory' },
   ];
+
+  // Re-assess risk whenever editedCommand changes
+  useEffect(() => {
+    if (!generated || !isEditing) return;
+
+    if (debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current);
+    }
+
+    debounceTimerRef.current = setTimeout(async () => {
+      if (!editedCommand.trim()) return;
+      try {
+        const val = await ApiService.validateCommand(editedCommand);
+        setGenerated((prev) => {
+          if (!prev) return null;
+          const blocked = val.blocked_reasons && val.blocked_reasons.length > 0;
+          return {
+            ...prev,
+            command: editedCommand,
+            risk_level: val.risk_level,
+            risk_reason: blocked
+              ? val.blocked_reasons[0]
+              : val.warnings.length > 0
+              ? val.warnings[0]
+              : 'Safe command',
+            requires_confirmation: val.risk_level === 'high',
+            potentially_destructive: blocked || val.risk_level === 'high' || val.warnings.length > 0,
+          };
+        });
+      } catch {
+        // Ignore live validation errors
+      }
+    }, 400);
+
+    return () => {
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current);
+      }
+    };
+  }, [editedCommand, isEditing]);
 
   const handleGenerate = async (queryText?: string) => {
     const q = queryText || prompt;
@@ -72,6 +116,16 @@ export const CommandAssistantPage: React.FC = () => {
     }
   };
 
+  const handleCopyOutput = () => {
+    if (!executionResult) return;
+    const output = [executionResult.stdout, executionResult.stderr].filter(Boolean).join('\n');
+    if (output) {
+      navigator.clipboard.writeText(output);
+      setOutputCopied(true);
+      setTimeout(() => setOutputCopied(false), 2000);
+    }
+  };
+
   const handleClear = () => {
     setPrompt('');
     setGenerated(null);
@@ -80,17 +134,35 @@ export const CommandAssistantPage: React.FC = () => {
     setExecutionResult(null);
     setError(null);
     setHighRiskConfirmed(false);
+    setActiveExecutionId(null);
+  };
+
+  const handleCancelExecution = async () => {
+    if (!activeExecutionId) return;
+    try {
+      setIsCancelling(true);
+      await ApiService.cancelExecution(activeExecutionId);
+    } catch (err: any) {
+      console.warn('Cancel failed:', err);
+    } finally {
+      setIsCancelling(false);
+    }
   };
 
   const executeApproved = async () => {
     const cmdToRun = isEditing ? editedCommand : generated?.command;
     if (!cmdToRun || !generated) return;
 
+    // Generate unique execution ID for client-side cancellation tracking
+    const execId = `exec-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`;
+    setActiveExecutionId(execId);
+
     try {
       setIsExecuting(true);
       setError(null);
 
       const result = await ApiService.executeCommand({
+        id: execId,
         command: cmdToRun,
         prompt: prompt || 'Direct execution',
         risk_level: generated.risk_level,
@@ -103,6 +175,7 @@ export const CommandAssistantPage: React.FC = () => {
       setError(err.message || 'Execution failed');
     } finally {
       setIsExecuting(false);
+      setActiveExecutionId(null);
     }
   };
 
@@ -298,7 +371,10 @@ export const CommandAssistantPage: React.FC = () => {
                 {generated.suggested_alternatives.map((alt, idx) => (
                   <div
                     key={idx}
-                    onClick={() => setEditedCommand(alt)}
+                    onClick={() => {
+                      setEditedCommand(alt);
+                      setIsEditing(false);
+                    }}
                     className="flex items-center justify-between rounded-lg border border-slate-800/80 bg-slate-950/40 px-3 py-2 text-xs font-mono text-slate-300 hover:border-slate-700 hover:bg-slate-900 cursor-pointer transition-colors"
                     title="Click to use this alternative"
                   >
@@ -317,6 +393,16 @@ export const CommandAssistantPage: React.FC = () => {
               <span>Target Environment: Docker Sandbox (Non-root, Network Disabled)</span>
             </div>
             <div className="flex items-center gap-3 w-full sm:w-auto">
+              {isExecuting && (
+                <button
+                  onClick={handleCancelExecution}
+                  disabled={isCancelling}
+                  className="flex items-center gap-1.5 rounded-xl border border-rose-500/40 bg-rose-950/60 px-4 py-2.5 text-xs font-bold text-rose-300 hover:bg-rose-900 hover:text-white transition-all"
+                >
+                  <StopCircle className="h-4 w-4" />
+                  <span>{isCancelling ? 'Cancelling...' : 'Cancel Execution'}</span>
+                </button>
+              )}
               <button
                 onClick={handleExecuteClick}
                 disabled={isExecuting}
@@ -345,6 +431,14 @@ export const CommandAssistantPage: React.FC = () => {
               <span className="ml-2 text-xs text-slate-400">Sandbox Terminal Telemetry</span>
             </div>
             <div className="flex items-center gap-4 text-xs">
+              <button
+                onClick={handleCopyOutput}
+                className="flex items-center gap-1 rounded bg-slate-900 px-2 py-1 text-[11px] text-slate-300 hover:bg-slate-800 hover:text-white border border-slate-800 transition-colors"
+                title="Copy terminal output"
+              >
+                {outputCopied ? <Check className="h-3 w-3 text-emerald-400" /> : <Copy className="h-3 w-3" />}
+                <span>{outputCopied ? 'Copied' : 'Copy Output'}</span>
+              </button>
               <span
                 className={`flex items-center gap-1 font-semibold ${
                   executionResult.status === 'success' ? 'text-emerald-400' : 'text-rose-400'

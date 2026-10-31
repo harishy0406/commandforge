@@ -20,6 +20,7 @@ export interface ValidationResult {
 }
 
 export interface ExecutionRequest {
+  id?: string;
   command: string;
   prompt: string;
   risk_level: RiskLevel;
@@ -104,5 +105,6 @@ export interface BackendHealth {
   timestamp: string;
   version: string;
   execution_adapter: string;
+  docker_available?: boolean;
   ai_provider: string;
 }

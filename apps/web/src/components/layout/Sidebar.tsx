@@ -10,6 +10,7 @@ import {
   ChevronLeft,
   ChevronRight,
   ShieldCheck,
+  ShieldAlert,
 } from 'lucide-react';
 
 export type NavItem = 'overview' | 'assistant' | 'history' | 'monitor' | 'settings' | 'about';
@@ -20,6 +21,7 @@ interface SidebarProps {
   isCollapsed: boolean;
   onToggleCollapse: () => void;
   backendConnected: boolean;
+  dockerAvailable?: boolean;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
@@ -28,6 +30,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   isCollapsed,
   onToggleCollapse,
   backendConnected,
+  dockerAvailable = false,
 }) => {
   const navItems = [
     { id: 'overview' as NavItem, label: 'Overview', icon: LayoutDashboard },
@@ -111,7 +114,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
         <div
           className={`flex items-center gap-2.5 rounded-lg border p-2.5 ${
             backendConnected
-              ? 'border-emerald-500/20 bg-emerald-950/20 text-emerald-300'
+              ? dockerAvailable
+                ? 'border-cyan-500/20 bg-cyan-950/20 text-cyan-300'
+                : 'border-emerald-500/20 bg-emerald-950/20 text-emerald-300'
               : 'border-amber-500/20 bg-amber-950/20 text-amber-300'
           }`}
         >
@@ -119,10 +124,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
           {!isCollapsed && (
             <div className="flex flex-col text-xs leading-tight truncate">
               <span className="font-semibold truncate">
-                {backendConnected ? 'Sandbox Active' : 'Offline / Standby'}
+                {backendConnected ? (dockerAvailable ? 'Docker Sandbox' : 'Process Sandbox') : 'Offline / Standby'}
               </span>
               <span className="text-[10px] opacity-75 truncate">
-                {backendConnected ? 'Docker Container Guard' : 'Connecting to API...'}
+                {backendConnected ? (dockerAvailable ? 'Container Guard Active' : 'Restricted Subprocess') : 'Connecting to API...'}
               </span>
             </div>
           )}

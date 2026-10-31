@@ -39,6 +39,7 @@ nlohmann::json ApiController::handleHealth() {
         {"timestamp", isoTimestamp()},
         {"version", "1.0.0"},
         {"execution_adapter", config_.execution_adapter},
+        {"docker_available", execution_engine_ ? execution_engine_->isDockerAvailable() : false},
         {"ai_provider", config_.ai_provider}
     };
 }
@@ -88,6 +89,7 @@ nlohmann::json ApiController::handleExecuteCommand(const nlohmann::json& request
     }
 
     ExecutionRequest req;
+    req.id = requestBody.value("id", "");
     req.command = requestBody["command"].get<std::string>();
     req.prompt = requestBody.value("prompt", "");
     req.risk_level = stringToRiskLevel(requestBody.value("risk_level", "low"));
@@ -151,17 +153,45 @@ nlohmann::json ApiController::handleGetSettings() {
 }
 
 nlohmann::json ApiController::handleUpdateSettings(const nlohmann::json& requestBody) {
-    if (requestBody.contains("execution_timeout_seconds") && requestBody["execution_timeout_seconds"].is_number_integer()) {
-        config_.execution_timeout_seconds = requestBody["execution_timeout_seconds"].get<int>();
+    if (requestBody.contains("execution_timeout_seconds")) {
+        if (!requestBody["execution_timeout_seconds"].is_number_integer()) {
+            return {{"error", "execution_timeout_seconds must be an integer"}};
+        }
+        int val = requestBody["execution_timeout_seconds"].get<int>();
+        if (val < 1 || val > 300) {
+            return {{"error", "execution_timeout_seconds must be between 1 and 300 seconds"}};
+        }
+        config_.execution_timeout_seconds = val;
     }
-    if (requestBody.contains("max_output_bytes") && requestBody["max_output_bytes"].is_number_integer()) {
-        config_.max_output_bytes = requestBody["max_output_bytes"].get<int>();
+    if (requestBody.contains("max_output_bytes")) {
+        if (!requestBody["max_output_bytes"].is_number_integer()) {
+            return {{"error", "max_output_bytes must be an integer"}};
+        }
+        int val = requestBody["max_output_bytes"].get<int>();
+        if (val < 1024 || val > 10485760) {
+            return {{"error", "max_output_bytes must be between 1024 and 10485760 bytes (10MB)"}};
+        }
+        config_.max_output_bytes = val;
     }
-    if (requestBody.contains("history_retention_days") && requestBody["history_retention_days"].is_number_integer()) {
-        config_.history_retention_days = requestBody["history_retention_days"].get<int>();
+    if (requestBody.contains("history_retention_days")) {
+        if (!requestBody["history_retention_days"].is_number_integer()) {
+            return {{"error", "history_retention_days must be an integer"}};
+        }
+        int val = requestBody["history_retention_days"].get<int>();
+        if (val < 1 || val > 365) {
+            return {{"error", "history_retention_days must be between 1 and 365 days"}};
+        }
+        config_.history_retention_days = val;
     }
-    if (requestBody.contains("monitoring_interval_ms") && requestBody["monitoring_interval_ms"].is_number_integer()) {
-        config_.monitoring_interval_ms = requestBody["monitoring_interval_ms"].get<int>();
+    if (requestBody.contains("monitoring_interval_ms")) {
+        if (!requestBody["monitoring_interval_ms"].is_number_integer()) {
+            return {{"error", "monitoring_interval_ms must be an integer"}};
+        }
+        int val = requestBody["monitoring_interval_ms"].get<int>();
+        if (val < 500 || val > 60000) {
+            return {{"error", "monitoring_interval_ms must be between 500 and 60000 ms"}};
+        }
+        config_.monitoring_interval_ms = val;
     }
     return config_.toPublicJson();
 }

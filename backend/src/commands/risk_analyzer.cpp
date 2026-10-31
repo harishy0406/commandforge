@@ -39,6 +39,27 @@ void RiskAnalyzer::initializeRules() {
     });
 
     rules_.push_back({
+        std::regex(R"(docker\.sock)", std::regex_constants::icase),
+        "Docker daemon socket access prohibited to prevent container breakout.",
+        RiskLevel::High,
+        true
+    });
+
+    rules_.push_back({
+        std::regex(R"(\/dev\/(tcp|udp)\/)", std::regex_constants::icase),
+        "Bash pseudo-device socket redirection (/dev/tcp or /dev/udp) prohibited.",
+        RiskLevel::High,
+        true
+    });
+
+    rules_.push_back({
+        std::regex(R"((nc|ncat|netcat)\s+.*-e\s+)", std::regex_constants::icase),
+        "Netcat command execution (-e flag) prohibited to prevent unmonitored reverse shells.",
+        RiskLevel::High,
+        true
+    });
+
+    rules_.push_back({
         std::regex(R"(169\.254\.169\.254)", std::regex_constants::icase),
         "Cloud instance metadata service probing prohibited.",
         RiskLevel::High,

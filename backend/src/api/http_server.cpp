@@ -27,6 +27,12 @@ void HttpServer::setupCors() {
         }
         return httplib::Server::HandlerResponse::Unhandled;
     });
+
+    server_.set_error_handler([](const httplib::Request&, httplib::Response& res) {
+        if (res.status == 404 && res.body.empty()) {
+            res.set_content(R"({"error":"Endpoint not found"})", "application/json");
+        }
+    });
 }
 
 static void sendJson(httplib::Response& res, const nlohmann::json& j, int status = 200) {
@@ -50,7 +56,8 @@ void HttpServer::setupRoutes() {
         try {
             auto body = nlohmann::json::parse(req.body);
             auto response = controller_->handleGenerateCommand(body);
-            sendJson(res, response);
+            int status = response.contains("error") ? 400 : 200;
+            sendJson(res, response, status);
         } catch (const std::exception& e) {
             sendJson(res, {{"error", std::string("Invalid JSON: ") + e.what()}}, 400);
         }
@@ -61,7 +68,8 @@ void HttpServer::setupRoutes() {
         try {
             auto body = nlohmann::json::parse(req.body);
             auto response = controller_->handleValidateCommand(body);
-            sendJson(res, response);
+            int status = response.contains("error") ? 400 : 200;
+            sendJson(res, response, status);
         } catch (const std::exception& e) {
             sendJson(res, {{"error", std::string("Invalid JSON: ") + e.what()}}, 400);
         }
@@ -72,7 +80,8 @@ void HttpServer::setupRoutes() {
         try {
             auto body = nlohmann::json::parse(req.body);
             auto response = controller_->handleExecuteCommand(body);
-            sendJson(res, response);
+            int status = response.contains("error") ? 400 : 200;
+            sendJson(res, response, status);
         } catch (const std::exception& e) {
             sendJson(res, {{"error", std::string("Invalid JSON: ") + e.what()}}, 400);
         }
@@ -90,7 +99,9 @@ void HttpServer::setupRoutes() {
     // GET /api/commands/history/:id
     server_.Get(R"(/api/commands/history/([a-zA-Z0-9\-]+))", [this](const httplib::Request& req, httplib::Response& res) {
         std::string id = req.matches[1];
-        sendJson(res, controller_->handleGetHistoryById(id));
+        auto response = controller_->handleGetHistoryById(id);
+        int status = response.contains("error") ? 404 : 200;
+        sendJson(res, response, status);
     });
 
     // POST /api/commands/execute/:id/cancel
@@ -101,7 +112,9 @@ void HttpServer::setupRoutes() {
 
     // GET /api/system/metrics
     server_.Get("/api/system/metrics", [this](const httplib::Request&, httplib::Response& res) {
-        sendJson(res, controller_->handleGetSystemMetrics());
+        auto response = controller_->handleGetSystemMetrics();
+        int status = response.contains("error") ? 503 : 200;
+        sendJson(res, response, status);
     });
 
     // GET /api/settings
@@ -113,7 +126,9 @@ void HttpServer::setupRoutes() {
     server_.Put("/api/settings", [this](const httplib::Request& req, httplib::Response& res) {
         try {
             auto body = nlohmann::json::parse(req.body);
-            sendJson(res, controller_->handleUpdateSettings(body));
+            auto response = controller_->handleUpdateSettings(body);
+            int status = response.contains("error") ? 400 : 200;
+            sendJson(res, response, status);
         } catch (const std::exception& e) {
             sendJson(res, {{"error", std::string("Invalid JSON: ") + e.what()}}, 400);
         }

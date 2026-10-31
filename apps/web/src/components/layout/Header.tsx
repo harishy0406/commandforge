@@ -4,13 +4,14 @@ import {
   Server,
   Cpu,
   RefreshCw,
-  ExternalLink,
+  Box,
 } from 'lucide-react';
 import { NavItem } from './Sidebar';
 
 interface HeaderProps {
   currentTab: NavItem;
   backendConnected: boolean;
+  dockerAvailable?: boolean;
   aiProvider: string;
   onRefresh: () => void;
   onNavigateAssistant: () => void;
@@ -20,6 +21,7 @@ interface HeaderProps {
 export const Header: React.FC<HeaderProps> = ({
   currentTab,
   backendConnected,
+  dockerAvailable = false,
   aiProvider,
   onRefresh,
   onNavigateAssistant,
@@ -59,6 +61,15 @@ export const Header: React.FC<HeaderProps> = ({
           />
           <span className="font-mono text-slate-300">
             {backendConnected ? 'Engine Online' : 'Backend Disconnected'}
+          </span>
+        </div>
+
+        {/* Sandbox Docker Status Badge */}
+        <div className="hidden sm:flex items-center gap-1.5 rounded-full border border-slate-800 bg-slate-900/60 px-3 py-1 text-xs text-slate-300">
+          <Box className={`h-3.5 w-3.5 ${dockerAvailable ? 'text-cyan-400' : 'text-slate-500'}`} />
+          <span className="font-mono text-slate-400 text-[10px]">SANDBOX:</span>
+          <span className={`font-medium ${dockerAvailable ? 'text-cyan-300' : 'text-slate-400'}`}>
+            {dockerAvailable ? 'Docker Ready' : 'Process Sandbox'}
           </span>
         </div>
 

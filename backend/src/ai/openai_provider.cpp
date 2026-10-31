@@ -51,6 +51,22 @@ GeneratedCommand OpenAIProvider::parseModelResponse(const std::string& responseJ
     try {
         auto parsed = nlohmann::json::parse(responseJson);
         std::string rawContent = parsed["choices"][0]["message"]["content"];
+
+        // Strip markdown code fences if present (e.g. ```json ... ```)
+        auto startFence = rawContent.find("```json");
+        if (startFence == std::string::npos) {
+            startFence = rawContent.find("```");
+        }
+        if (startFence != std::string::npos) {
+            auto firstNewline = rawContent.find('\n', startFence);
+            if (firstNewline != std::string::npos) {
+                auto endFence = rawContent.find("```", firstNewline);
+                if (endFence != std::string::npos) {
+                    rawContent = rawContent.substr(firstNewline + 1, endFence - (firstNewline + 1));
+                }
+            }
+        }
+
         auto innerJson = nlohmann::json::parse(rawContent);
 
         cmd.command = innerJson.value("command", "");

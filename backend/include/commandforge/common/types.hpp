@@ -104,6 +104,7 @@ struct ValidationResult {
 };
 
 struct ExecutionRequest {
+    std::string id;
     std::string command;
     std::string prompt;
     RiskLevel risk_level{RiskLevel::Low};
