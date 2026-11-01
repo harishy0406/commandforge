@@ -49,7 +49,7 @@ export const CommandAssistantPage: React.FC = () => {
         setActiveProvider(h.ai_provider || '');
         setActiveModel(h.ai_model || '');
       })
-      .catch(() => {});
+      .catch(() => { });
   }, []);
 
   const examplePrompts = [
@@ -82,8 +82,8 @@ export const CommandAssistantPage: React.FC = () => {
             risk_reason: blocked
               ? val.blocked_reasons[0]
               : val.warnings.length > 0
-              ? val.warnings[0]
-              : 'Safe command',
+                ? val.warnings[0]
+                : 'Safe command',
             requires_confirmation: val.risk_level === 'high',
             potentially_destructive: blocked || val.risk_level === 'high' || val.warnings.length > 0,
           };
@@ -335,11 +335,10 @@ export const CommandAssistantPage: React.FC = () => {
             <div className="flex items-center gap-2">
               <button
                 onClick={() => setIsEditing(!isEditing)}
-                className={`flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium transition-all ${
-                  isEditing
+                className={`flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium transition-all ${isEditing
                     ? 'border-indigo-500 bg-indigo-950/40 text-indigo-300'
                     : 'border-slate-800 bg-slate-950/80 text-slate-300 hover:bg-slate-800'
-                }`}
+                  }`}
               >
                 <Edit2 className="h-3.5 w-3.5" />
                 <span>{isEditing ? 'Finish Editing' : 'Edit Command'}</span>
@@ -432,11 +431,10 @@ export const CommandAssistantPage: React.FC = () => {
               <button
                 onClick={handleExecuteClick}
                 disabled={isExecuting}
-                className={`flex w-full sm:w-auto items-center justify-center gap-2 rounded-xl px-6 py-2.5 text-sm font-bold text-white shadow-lg transition-all ${
-                  generated.risk_level === 'high'
+                className={`flex w-full sm:w-auto items-center justify-center gap-2 rounded-xl px-6 py-2.5 text-sm font-bold text-white shadow-lg transition-all ${generated.risk_level === 'high'
                     ? 'bg-rose-600 hover:bg-rose-500 shadow-rose-600/30'
                     : 'bg-emerald-600 hover:bg-emerald-500 shadow-emerald-600/30'
-                } disabled:opacity-50 hover:scale-[1.02] active:scale-[0.98]`}
+                  } disabled:opacity-50 hover:scale-[1.02] active:scale-[0.98]`}
               >
                 <Play className={`h-4 w-4 fill-white ${isExecuting ? 'animate-spin' : ''}`} />
                 <span>{isExecuting ? 'Executing in Container...' : 'Explicitly Approve & Execute'}</span>
@@ -466,9 +464,8 @@ export const CommandAssistantPage: React.FC = () => {
                 <span>{outputCopied ? 'Copied' : 'Copy Output'}</span>
               </button>
               <span
-                className={`flex items-center gap-1 font-semibold ${
-                  executionResult.status === 'success' ? 'text-emerald-400' : 'text-rose-400'
-                }`}
+                className={`flex items-center gap-1 font-semibold ${executionResult.status === 'success' ? 'text-emerald-400' : 'text-rose-400'
+                  }`}
               >
                 {executionResult.status === 'success' ? <CheckCircle2 className="h-3.5 w-3.5" /> : <XCircle className="h-3.5 w-3.5" />}
                 <span className="uppercase">{executionResult.status}</span>
