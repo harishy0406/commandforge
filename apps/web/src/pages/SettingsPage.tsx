@@ -16,6 +16,9 @@ import {
   EyeOff,
   ExternalLink,
   Sparkles,
+  Lock,
+  Zap,
+  Terminal,
 } from 'lucide-react';
 import { ServerSettings, BackendHealth, AIProviderPreset } from '../types/api';
 import { ApiService } from '../services/api';
@@ -106,280 +109,373 @@ export const SettingsPage: React.FC = () => {
   const currentPreset = presets.find((p) => p.id === selectedProvider) || presets.find((p) => p.id === 'mock');
 
   return (
-    <div className="space-y-6 max-w-4xl mx-auto">
-      {/* Backend Health Callout */}
-      <div className="rounded-2xl border border-slate-800 bg-slate-900/40 p-5 backdrop-blur-sm space-y-3 shadow-xl">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
-            <Server className="h-5 w-5 text-indigo-400" />
-            <h3 className="text-sm font-semibold text-white">C++ Execution Engine Status</h3>
+    <div className="space-y-6 max-w-6xl mx-auto">
+      {/* Top Deck: System & Security Status (12 cols) */}
+      <div className="grid grid-cols-1 md:grid-cols-12 gap-5">
+        {/* Backend Health Matrix (8 cols) */}
+        <div className="bento-card md:col-span-8 p-5 flex flex-col justify-between space-y-4">
+          <div className="flex items-center justify-between border-b border-slate-800/80 pb-3">
+            <div className="flex items-center gap-2.5">
+              <span className="flex h-2.5 w-2.5 relative">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500" />
+              </span>
+              <span className="label-micro text-white">Execution Engine Health</span>
+            </div>
+            <span
+              className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-mono font-medium ${
+                health?.status === 'healthy'
+                  ? 'bg-emerald-500/10 text-emerald-300 border border-emerald-500/30'
+                  : 'bg-rose-500/10 text-rose-300 border border-rose-500/30'
+              }`}
+            >
+              ● {health?.status === 'healthy' ? 'Engine Fully Operational' : 'Offline / Degraded'}
+            </span>
           </div>
-          <span
-            className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-mono font-medium ${
-              health?.status === 'healthy'
-                ? 'bg-emerald-500/10 text-emerald-300 border border-emerald-500/30'
-                : 'bg-rose-500/10 text-rose-300 border border-rose-500/30'
-            }`}
-          >
-            ● {health?.status || 'Disconnected'}
-          </span>
+
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs font-mono">
+            <div className="rounded-xl bg-slate-950/70 p-3 border border-slate-800/80">
+              <span className="label-micro text-slate-500 block">Version</span>
+              <span className="text-slate-200 font-bold mt-1 block">{health?.version || '1.0.0'}</span>
+            </div>
+            <div className="rounded-xl bg-slate-950/70 p-3 border border-slate-800/80">
+              <span className="label-micro text-slate-500 block">Active Engine</span>
+              <span className="text-indigo-400 font-bold uppercase mt-1 block truncate">
+                {health?.ai_provider || 'Mock / Offline'}
+              </span>
+            </div>
+            <div className="rounded-xl bg-slate-950/70 p-3 border border-slate-800/80">
+              <span className="label-micro text-slate-500 block">Model Target</span>
+              <span className="text-cyan-300 font-bold truncate mt-1 block">{health?.ai_model || 'Standard'}</span>
+            </div>
+            <div className="rounded-xl bg-slate-950/70 p-3 border border-slate-800/80">
+              <span className="label-micro text-slate-500 block">Sandbox Adapter</span>
+              <span className="text-emerald-300 font-bold mt-1 block truncate">
+                {health?.execution_adapter || 'Docker Sandbox'}
+              </span>
+            </div>
+          </div>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 pt-2 text-xs font-mono">
-          <div className="rounded-lg bg-slate-950 p-2.5 border border-slate-800">
-            <span className="text-slate-400 block text-[10px] uppercase">Engine Version</span>
-            <span className="text-slate-200 font-bold">{health?.version || '1.0.0'}</span>
+        {/* Zero-Credential Guarantee Deck (4 cols) */}
+        <div className="bento-card md:col-span-4 p-5 flex flex-col justify-between space-y-3 bg-gradient-to-br from-indigo-950/20 to-slate-950/80">
+          <div>
+            <div className="flex items-center gap-2 text-indigo-400 mb-2">
+              <Shield className="h-4 w-4" />
+              <span className="label-micro text-indigo-300">Vault Security</span>
+            </div>
+            <h4 className="text-sm font-bold text-white tracking-tight">Zero-Credential Exposure</h4>
+            <p className="text-xs text-slate-400 mt-1 leading-relaxed">
+              API credentials reside exclusively in server volatile memory or environment variables. No secrets are ever stored in client localStorage.
+            </p>
           </div>
-          <div className="rounded-lg bg-slate-950 p-2.5 border border-slate-800">
-            <span className="text-slate-400 block text-[10px] uppercase">Active AI Provider</span>
-            <span className="text-indigo-400 font-bold uppercase">{health?.ai_provider || 'Mock / Offline'}</span>
-          </div>
-          <div className="rounded-lg bg-slate-950 p-2.5 border border-slate-800">
-            <span className="text-slate-400 block text-[10px] uppercase">Model</span>
-            <span className="text-slate-200 font-bold truncate block">{health?.ai_model || 'Standard'}</span>
-          </div>
-          <div className="rounded-lg bg-slate-950 p-2.5 border border-slate-800">
-            <span className="text-slate-400 block text-[10px] uppercase">Isolation Layer</span>
-            <span className="text-slate-200 font-bold">{health?.execution_adapter || 'Docker Sandbox'}</span>
+
+          <div className="flex items-center gap-2 rounded-lg bg-indigo-950/40 border border-indigo-500/20 p-2.5 text-[11px] text-indigo-300 font-mono">
+            <Lock className="h-3.5 w-3.5 shrink-0" />
+            <span>Encrypted In-Flight Payload</span>
           </div>
         </div>
       </div>
 
       <form onSubmit={handleSave} className="space-y-6">
-        {/* AI Provider & Free Tier Configuration Card */}
-        <div className="rounded-2xl border border-slate-800 bg-slate-900/40 p-6 space-y-6 shadow-xl backdrop-blur-sm">
-          <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-            <div className="flex items-center gap-2">
-              <Cpu className="h-5 w-5 text-indigo-400" />
-              <h3 className="text-sm font-semibold text-white">AI Provider & Model Configuration</h3>
+        {/* Bento Provider Gallery (12 cols) */}
+        <div className="bento-card p-6 space-y-5">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-800/80 pb-3">
+            <div>
+              <span className="label-micro text-slate-400">Model Routing Matrix</span>
+              <h3 className="text-base font-bold text-white tracking-tight mt-0.5">
+                AI Provider & Free Tier Engines
+              </h3>
             </div>
-            <span className="text-xs text-slate-400 font-mono">Free Providers Supported</span>
+            <span className="text-xs font-mono text-emerald-400 flex items-center gap-1.5">
+              <Sparkles className="h-3.5 w-3.5" /> Free & Local Providers Supported
+            </span>
           </div>
 
-          {/* Provider Preset Cards */}
-          <div className="space-y-2">
-            <label className="block text-xs font-semibold text-slate-300">
-              Select AI Engine / Free Provider
-            </label>
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2.5">
-              {presets.map((preset) => {
-                const isSelected = selectedProvider === preset.id;
-                return (
-                  <button
-                    type="button"
-                    key={preset.id}
-                    onClick={() => handleProviderSelect(preset)}
-                    className={`flex flex-col text-left rounded-xl p-3 border transition-all ${
-                      isSelected
-                        ? 'border-indigo-500 bg-indigo-950/40 shadow-md shadow-indigo-900/20 text-white'
-                        : 'border-slate-800 bg-slate-950/60 text-slate-300 hover:border-slate-700 hover:bg-slate-900/60'
-                    }`}
-                  >
-                    <div className="flex items-center justify-between w-full mb-1">
-                      <span className="font-semibold text-xs text-slate-100 flex items-center gap-1.5">
-                        {preset.id === 'ollama' ? <HardDrive className="h-3.5 w-3.5 text-cyan-400" /> : <Globe className="h-3.5 w-3.5 text-indigo-400" />}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            {presets.map((preset) => {
+              const isSelected = selectedProvider === preset.id;
+              return (
+                <button
+                  type="button"
+                  key={preset.id}
+                  onClick={() => handleProviderSelect(preset)}
+                  className={`flex flex-col justify-between text-left rounded-xl p-4 border transition-all relative overflow-hidden group ${
+                    isSelected
+                      ? 'border-indigo-500 bg-indigo-950/30 shadow-lg shadow-indigo-500/10 text-white'
+                      : 'border-slate-800/80 bg-slate-950/50 text-slate-300 hover:border-slate-700 hover:bg-slate-900/50'
+                  }`}
+                >
+                  {isSelected && (
+                    <div className="absolute top-0 right-0 w-24 h-24 bg-indigo-500/10 rounded-full blur-xl pointer-events-none" />
+                  )}
+
+                  <div>
+                    <div className="flex items-center justify-between w-full mb-1.5">
+                      <span className="font-bold text-xs text-slate-100 flex items-center gap-2">
+                        {preset.id === 'ollama' ? (
+                          <HardDrive className="h-4 w-4 text-cyan-400" />
+                        ) : preset.id === 'mock' ? (
+                          <Terminal className="h-4 w-4 text-amber-400" />
+                        ) : (
+                          <Globe className="h-4 w-4 text-indigo-400" />
+                        )}
                         {preset.name}
                       </span>
-                      {isSelected && (
-                        <span className="h-2 w-2 rounded-full bg-indigo-400 shadow-[0_0_6px_rgba(129,140,248,0.8)]" />
+                      {isSelected ? (
+                        <span className="h-2 w-2 rounded-full bg-indigo-400 shadow-[0_0_8px_rgba(129,140,248,0.9)]" />
+                      ) : (
+                        <span className="h-2 w-2 rounded-full bg-slate-800" />
                       )}
                     </div>
-                    <span className="text-[11px] text-slate-400 line-clamp-2 leading-tight">
+                    <p className="text-xs text-slate-400 line-clamp-2 leading-relaxed">
                       {preset.description}
+                    </p>
+                  </div>
+
+                  <div className="mt-3 pt-2.5 border-t border-slate-800/60 flex items-center justify-between text-[10px] font-mono">
+                    <span className="text-slate-400">
+                      {preset.requires_api_key ? 'API Key Required' : 'Zero Key / Offline'}
                     </span>
-                    <span className="text-[10px] font-mono mt-2 text-indigo-300/80">
-                      {preset.requires_api_key ? 'Key required (free)' : 'No key required'}
+                    <span className="text-indigo-400 font-semibold uppercase">
+                      {preset.id === 'mock' ? 'Offline' : 'Ready'}
                     </span>
-                  </button>
-                );
-              })}
-            </div>
+                  </div>
+                </button>
+              );
+            })}
           </div>
+        </div>
 
-          {/* Provider Details & Recommended Models */}
-          {currentPreset && (
-            <div className="rounded-xl border border-slate-800/80 bg-slate-950/60 p-4 space-y-4">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-800/60 pb-3">
-                <span className="text-xs font-semibold text-slate-200">
-                  {currentPreset.name} Settings
-                </span>
-                <span className="text-xs text-slate-400 italic font-mono">
-                  {currentPreset.key_hint}
-                </span>
-              </div>
+        {/* Asymmetric 2-Column Tuning Deck */}
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-5">
+          {/* Left: Model & Key Configuration (7 cols) */}
+          <div className="bento-card md:col-span-7 p-6 space-y-5">
+            <div className="border-b border-slate-800/80 pb-3">
+              <span className="label-micro text-slate-400">Endpoint & Model Parameters</span>
+              <h3 className="text-sm font-bold text-white tracking-tight mt-0.5">
+                {currentPreset?.name} Configuration
+              </h3>
+            </div>
 
-              {/* Model Selection & Recommended Chips */}
-              <div className="space-y-2">
-                <label className="block text-xs font-medium text-slate-300">
-                  Target Model Name
-                </label>
-                <div className="flex flex-col sm:flex-row gap-2">
-                  <input
-                    type="text"
-                    value={model}
-                    onChange={(e) => setModel(e.target.value)}
-                    placeholder="e.g. gemini-2.0-flash, llama3.2..."
-                    className="flex-1 rounded-lg border border-slate-800 bg-slate-950 px-3 py-2 text-xs font-mono text-slate-100 focus:border-indigo-500 focus:outline-none"
-                    required
-                  />
-                </div>
-                {currentPreset.recommended_models && currentPreset.recommended_models.length > 0 && (
-                  <div className="flex flex-wrap items-center gap-1.5 pt-1">
-                    <span className="text-[10px] text-slate-400 font-medium mr-1">Recommended Free Models:</span>
+            {/* Target Model Name */}
+            <div className="space-y-2">
+              <label className="block text-xs font-semibold text-slate-200">
+                Target Model Identifier
+              </label>
+              <input
+                type="text"
+                value={model}
+                onChange={(e) => setModel(e.target.value)}
+                placeholder="e.g. gemini-2.0-flash, llama3.2, deepseek-r1..."
+                className="w-full rounded-xl border border-slate-800 bg-slate-950 px-3.5 py-2.5 text-xs font-mono text-slate-100 focus:border-indigo-500 focus:outline-none shadow-inner"
+                required
+              />
+
+              {currentPreset?.recommended_models && currentPreset.recommended_models.length > 0 && (
+                <div className="pt-1 space-y-1.5">
+                  <span className="label-micro text-slate-500 block">Recommended Free Models:</span>
+                  <div className="flex flex-wrap items-center gap-1.5">
                     {currentPreset.recommended_models.map((rec) => (
                       <button
                         type="button"
                         key={rec}
                         onClick={() => setModel(rec)}
-                        className={`rounded-md px-2 py-0.5 text-[10px] font-mono border transition-all ${
+                        className={`rounded-lg px-2.5 py-1 text-[11px] font-mono border transition-all ${
                           model === rec
-                            ? 'border-indigo-500 bg-indigo-900/50 text-indigo-200'
-                            : 'border-slate-800 bg-slate-900 text-slate-400 hover:border-slate-700 hover:text-slate-200'
+                            ? 'border-indigo-500 bg-indigo-900/40 text-indigo-200 font-semibold shadow-sm'
+                            : 'border-slate-800 bg-slate-900/60 text-slate-400 hover:border-slate-700 hover:text-slate-200'
                         }`}
                       >
                         {rec}
                       </button>
                     ))}
                   </div>
-                )}
+                </div>
+              )}
+            </div>
+
+            {/* Endpoint URL Input */}
+            {selectedProvider !== 'mock' && (
+              <div className="space-y-1.5">
+                <label className="block text-xs font-semibold text-slate-200">
+                  HTTP Endpoint URL (OpenAI-compatible)
+                </label>
+                <input
+                  type="text"
+                  value={apiUrl}
+                  onChange={(e) => setApiUrl(e.target.value)}
+                  placeholder="https://... or http://localhost:11434/v1/chat/completions"
+                  className="w-full rounded-xl border border-slate-800 bg-slate-950 px-3.5 py-2.5 text-xs font-mono text-slate-100 focus:border-indigo-500 focus:outline-none shadow-inner"
+                />
+              </div>
+            )}
+
+            {/* API Key Input */}
+            {selectedProvider !== 'mock' && (
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <label className="block text-xs font-semibold text-slate-200">
+                    API Secret Key {currentPreset?.requires_api_key ? '(Required)' : '(Optional for local)'}
+                  </label>
+                  {settings?.has_ai_api_key && (
+                    <span className="text-[11px] font-mono text-emerald-400">
+                      Active: {settings.ai_api_key_masked || 'Configured in backend'}
+                    </span>
+                  )}
+                </div>
+                <div className="relative">
+                  <input
+                    type={showApiKey ? 'text' : 'password'}
+                    value={apiKey}
+                    onChange={(e) => setApiKey(e.target.value)}
+                    placeholder={
+                      settings?.has_ai_api_key
+                        ? 'Enter new secret to replace existing, or leave blank to preserve'
+                        : currentPreset?.requires_api_key
+                        ? 'Paste API key here...'
+                        : 'Not required for local Ollama'
+                    }
+                    className="w-full rounded-xl border border-slate-800 bg-slate-950 px-3.5 py-2.5 pr-10 text-xs font-mono text-slate-100 focus:border-indigo-500 focus:outline-none shadow-inner"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowApiKey(!showApiKey)}
+                    className="absolute right-3 top-2.5 text-slate-400 hover:text-slate-200"
+                  >
+                    {showApiKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
+                </div>
+                <p className="text-[10px] text-slate-500 font-mono">
+                  {currentPreset?.key_hint}
+                </p>
+              </div>
+            )}
+          </div>
+
+          {/* Right: Sandbox Quotas & Retention Policy (5 cols) */}
+          <div className="bento-card md:col-span-5 p-6 flex flex-col justify-between space-y-5">
+            <div>
+              <div className="border-b border-slate-800/80 pb-3">
+                <span className="label-micro text-slate-400">Containment & Retention</span>
+                <h3 className="text-sm font-bold text-white tracking-tight mt-0.5">
+                  Sandbox Quotas & Audit Policy
+                </h3>
               </div>
 
-              {/* Endpoint URL Input */}
-              {selectedProvider !== 'mock' && (
-                <div className="space-y-1">
-                  <label className="block text-xs font-medium text-slate-300">
-                    Endpoint URL (OpenAI-compatible)
-                  </label>
-                  <input
-                    type="text"
-                    value={apiUrl}
-                    onChange={(e) => setApiUrl(e.target.value)}
-                    placeholder="https://... or http://localhost:11434/v1/chat/completions"
-                    className="w-full rounded-lg border border-slate-800 bg-slate-950 px-3 py-2 text-xs font-mono text-slate-100 focus:border-indigo-500 focus:outline-none"
-                  />
-                </div>
-              )}
-
-              {/* API Key Input */}
-              {selectedProvider !== 'mock' && (
-                <div className="space-y-1">
-                  <div className="flex items-center justify-between">
-                    <label className="block text-xs font-medium text-slate-300">
-                      API Key {currentPreset.requires_api_key ? '(Required)' : '(Optional for local Ollama)'}
+              <div className="space-y-4 mt-4">
+                {/* Execution Timeout */}
+                <div>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="text-xs font-semibold text-slate-200">
+                      Execution Timeout
                     </label>
-                    {settings?.has_ai_api_key && (
-                      <span className="text-[11px] font-mono text-emerald-400">
-                        Current: {settings.ai_api_key_masked || 'Configured'}
-                      </span>
-                    )}
+                    <span className="text-xs font-mono text-indigo-400 font-bold">
+                      {timeoutSec}s
+                    </span>
                   </div>
-                  <div className="relative">
-                    <input
-                      type={showApiKey ? 'text' : 'password'}
-                      value={apiKey}
-                      onChange={(e) => setApiKey(e.target.value)}
-                      placeholder={
-                        settings?.has_ai_api_key
-                          ? 'Enter new key to replace existing, or leave blank to keep current'
-                          : currentPreset.requires_api_key
-                          ? 'Paste API key here...'
-                          : 'Not required for local Ollama'
-                      }
-                      className="w-full rounded-lg border border-slate-800 bg-slate-950 px-3 py-2 pr-10 text-xs font-mono text-slate-100 focus:border-indigo-500 focus:outline-none"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowApiKey(!showApiKey)}
-                      className="absolute right-2.5 top-2 text-slate-400 hover:text-slate-200"
-                    >
-                      {showApiKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                    </button>
-                  </div>
-                  <p className="text-[11px] text-slate-500 mt-0.5">
-                    Keys are transmitted securely to backend in-memory storage only. Never stored in browser localStorage.
+                  <input
+                    type="range"
+                    min={1}
+                    max={60}
+                    value={timeoutSec}
+                    onChange={(e) => setTimeoutSec(Number(e.target.value))}
+                    className="w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-indigo-500"
+                  />
+                  <p className="text-[10px] text-slate-500 mt-1 font-mono">
+                    Hard SIGKILL after timeout expiration
                   </p>
                 </div>
-              )}
+
+                {/* Max Output Buffer */}
+                <div>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="text-xs font-semibold text-slate-200">
+                      Stdout Capture Limit
+                    </label>
+                    <span className="text-xs font-mono text-cyan-400 font-bold">
+                      {maxOutputKb} KB
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-4 gap-1.5">
+                    {[16, 64, 128, 512].map((kb) => (
+                      <button
+                        type="button"
+                        key={kb}
+                        onClick={() => setMaxOutputKb(kb)}
+                        className={`rounded-lg py-1 text-xs font-mono border transition-all ${
+                          maxOutputKb === kb
+                            ? 'border-cyan-500 bg-cyan-950/40 text-cyan-300 font-semibold'
+                            : 'border-slate-800 bg-slate-900/60 text-slate-400 hover:text-slate-200'
+                        }`}
+                      >
+                        {kb}KB
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* History Retention Days */}
+                <div>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="text-xs font-semibold text-slate-200">
+                      Audit Ledger Retention
+                    </label>
+                    <span className="text-xs font-mono text-emerald-400 font-bold">
+                      {historyDays} Days
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-3 gap-1.5">
+                    {[7, 30, 90].map((d) => (
+                      <button
+                        type="button"
+                        key={d}
+                        onClick={() => setHistoryDays(d)}
+                        className={`rounded-lg py-1 text-xs font-mono border transition-all ${
+                          historyDays === d
+                            ? 'border-emerald-500 bg-emerald-950/40 text-emerald-300 font-semibold'
+                            : 'border-slate-800 bg-slate-900/60 text-slate-400 hover:text-slate-200'
+                        }`}
+                      >
+                        {d} Days
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
             </div>
-          )}
+
+            <div className="rounded-xl border border-slate-800 bg-slate-950/60 p-3 text-[11px] text-slate-400 font-mono space-y-1">
+              <span className="text-slate-300 font-semibold block">Enforcement Mode:</span>
+              <span>• Drop cap: ALL</span>
+              <br />
+              <span>• Net bridge: DISABLED</span>
+            </div>
+          </div>
         </div>
 
-        {/* Execution Safety & Retention Policy */}
-        <div className="rounded-2xl border border-slate-800 bg-slate-900/40 p-6 space-y-5 shadow-xl">
-          <div className="flex items-center gap-2 border-b border-slate-800 pb-3">
-            <Sliders className="h-4 w-4 text-indigo-400" />
-            <h3 className="text-sm font-semibold text-white">Execution Safety & Retention Policy</h3>
-          </div>
-
-          <div className="space-y-4">
-            <div>
-              <label className="block text-xs font-medium text-slate-300 mb-1">
-                Command Execution Timeout (Seconds)
-              </label>
-              <input
-                type="number"
-                min={1}
-                max={300}
-                value={timeoutSec}
-                onChange={(e) => setTimeoutSec(Number(e.target.value))}
-                className="w-full sm:w-48 rounded-lg border border-slate-800 bg-slate-950 px-3 py-2 text-sm text-slate-100 focus:border-indigo-500 focus:outline-none font-mono"
-              />
-              <p className="text-[11px] text-slate-400 mt-1">
-                Sandboxes exceeding this timeout are automatically terminated.
-              </p>
-            </div>
-
-            <div>
-              <label className="block text-xs font-medium text-slate-300 mb-1">
-                Maximum Standard Output Capture (Kilobytes)
-              </label>
-              <input
-                type="number"
-                min={4}
-                max={1024}
-                value={maxOutputKb}
-                onChange={(e) => setMaxOutputKb(Number(e.target.value))}
-                className="w-full sm:w-48 rounded-lg border border-slate-800 bg-slate-950 px-3 py-2 text-sm text-slate-100 focus:border-indigo-500 focus:outline-none font-mono"
-              />
-              <p className="text-[11px] text-slate-400 mt-1">
-                Prevents memory exhaustion and log flooding from runaway terminal programs.
-              </p>
-            </div>
-
-            <div>
-              <label className="block text-xs font-medium text-slate-300 mb-1">
-                History Retention Period (Days)
-              </label>
-              <input
-                type="number"
-                min={1}
-                max={365}
-                value={historyDays}
-                onChange={(e) => setHistoryDays(Number(e.target.value))}
-                className="w-full sm:w-48 rounded-lg border border-slate-800 bg-slate-950 px-3 py-2 text-sm text-slate-100 focus:border-indigo-500 focus:outline-none font-mono"
-              />
-              <p className="text-[11px] text-slate-400 mt-1">
-                Number of days execution audit records are preserved in the SQLite repository.
-              </p>
-            </div>
-          </div>
-
-          <div className="flex items-center justify-between pt-4 border-t border-slate-800">
+        {/* Bottom Bento Action Deck */}
+        <div className="bento-card p-4 flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div>
             {savedNotice ? (
-              <span className="flex items-center gap-1.5 text-xs text-emerald-400 font-semibold animate-in fade-in">
+              <span className="flex items-center gap-2 text-xs text-emerald-400 font-semibold animate-in fade-in">
                 <CheckCircle2 className="h-4 w-4" />
-                Settings saved and active AI engine updated!
+                Settings saved successfully! C++ engine and provider router updated.
               </span>
-            ) : <div />}
-
-            <button
-              type="submit"
-              disabled={isSaving}
-              className="rounded-xl bg-indigo-600 px-6 py-2.5 text-xs font-bold text-white shadow-md shadow-indigo-600/30 hover:bg-indigo-500 transition-all disabled:opacity-50"
-            >
-              {isSaving ? 'Saving Configuration...' : 'Save All Settings'}
-            </button>
+            ) : (
+              <span className="text-xs text-slate-400 font-mono">
+                Changes take effect immediately on next command synthesis.
+              </span>
+            )}
           </div>
+
+          <button
+            type="submit"
+            disabled={isSaving}
+            className="w-full sm:w-auto rounded-xl bg-gradient-to-r from-indigo-600 to-indigo-500 px-6 py-2.5 text-xs font-bold text-white shadow-lg shadow-indigo-500/25 hover:from-indigo-500 hover:to-indigo-400 transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50"
+          >
+            {isSaving ? 'Applying Settings...' : 'Save Configuration'}
+          </button>
         </div>
       </form>
     </div>

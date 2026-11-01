@@ -10,6 +10,10 @@ import {
   ArrowUpRight,
   ShieldCheck,
   AlertTriangle,
+  Zap,
+  Activity,
+  Layers,
+  ChevronRight,
 } from 'lucide-react';
 import {
   AreaChart,
@@ -18,9 +22,6 @@ import {
   YAxis,
   Tooltip,
   ResponsiveContainer,
-  PieChart,
-  Pie,
-  Cell,
 } from 'recharts';
 import { DashboardSummary } from '../types/api';
 import { ApiService } from '../services/api';
@@ -58,291 +59,268 @@ export const OverviewPage: React.FC<OverviewPageProps> = ({
   }, []);
 
   const timelineData = [
-    { time: '17:30', cpu: 12, memory: 28 },
-    { time: '17:35', cpu: 18, memory: 31 },
-    { time: '17:40', cpu: 15, memory: 29 },
-    { time: '17:45', cpu: 25, memory: 35 },
-    { time: '17:50', cpu: 20, memory: 32 },
-    { time: '17:55', cpu: summary?.cpu_usage_pct || 14, memory: summary?.memory_usage_pct || 30 },
+    { time: '10m ago', cpu: 12, memory: 28 },
+    { time: '8m ago', cpu: 18, memory: 31 },
+    { time: '6m ago', cpu: 15, memory: 29 },
+    { time: '4m ago', cpu: 25, memory: 35 },
+    { time: '2m ago', cpu: 20, memory: 32 },
+    { time: 'Now', cpu: summary?.cpu_usage_pct || 14, memory: summary?.memory_usage_pct || 30 },
   ];
 
-  const pieData = [
-    { name: 'Successful', value: summary?.successful_executions || 1, color: '#10b981' },
-    { name: 'Failed / Rejected', value: Math.max(summary?.failed_executions || 0, 0), color: '#ef4444' },
-  ];
+  const successRate = summary?.success_rate ?? 100;
 
   return (
-    <div className="space-y-6">
-      {/* Top Banner / Callout */}
-      <div className="relative overflow-hidden rounded-2xl border border-indigo-500/20 bg-gradient-to-r from-indigo-950/40 via-slate-900/60 to-slate-950 p-6 shadow-xl">
-        <div className="relative z-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-          <div className="space-y-1">
-            <div className="inline-flex items-center gap-1.5 rounded-full bg-indigo-500/10 px-2.5 py-0.5 text-xs font-mono text-indigo-400 border border-indigo-500/20">
-              <ShieldCheck className="h-3.5 w-3.5" />
-              <span>Containerized POSIX Sandbox</span>
+    <div className="space-y-6 max-w-7xl mx-auto">
+      {/* ========================================================================= */}
+      {/* TOP BENTO ROW: Hero Synthesis Deck (8 cols) + Success Metric Deck (4 cols) */}
+      {/* ========================================================================= */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
+        
+        {/* BENTO HERO BANNER (8 cols) */}
+        <div className="bento-card lg:col-span-8 p-7 flex flex-col justify-between relative overflow-hidden">
+          <div className="absolute right-0 top-0 w-96 h-96 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none" />
+          
+          <div className="space-y-3 relative z-10">
+            <div className="flex items-center gap-2">
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-indigo-500/15 px-3 py-1 text-xs font-mono font-semibold text-indigo-400 border border-indigo-500/25">
+                <ShieldCheck className="h-3.5 w-3.5" />
+                <span>Deterministic POSIX Sandbox Isolation</span>
+              </span>
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/10 px-2.5 py-0.5 text-[10px] font-mono text-emerald-300 border border-emerald-500/20">
+                <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                Live Engine
+              </span>
             </div>
-            <h2 className="text-xl md:text-2xl font-bold tracking-tight text-white">
-              AI Command Synthesis & Safe Execution Engine
-            </h2>
-            <p className="text-sm text-slate-400 max-w-2xl">
-              Translate complex shell automation requests to audited POSIX commands. Commands run strictly inside disposable non-root containers with network isolation.
+
+            <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-white leading-tight">
+              AI-Powered Linux Terminal Assistant
+            </h1>
+            <p className="text-xs sm:text-sm text-slate-300 max-w-xl leading-relaxed">
+              Synthesize natural language into production-grade shell pipelines. Review risk scores, inspect AST rules, and approve execution inside restricted disposable containers.
             </p>
           </div>
-          <button
-            onClick={onNavigateAssistant}
-            className="flex shrink-0 items-center gap-2 rounded-xl bg-gradient-to-r from-indigo-600 to-indigo-500 px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-indigo-600/30 hover:brightness-110 transition-all hover:scale-[1.02] active:scale-[0.98]"
-          >
-            <Sparkles className="h-4 w-4" />
-            <span>Open Command Assistant</span>
-            <ArrowUpRight className="h-4 w-4 opacity-75" />
-          </button>
+
+          <div className="mt-6 flex flex-wrap items-center gap-3 relative z-10">
+            <button
+              onClick={onNavigateAssistant}
+              className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-indigo-600 via-indigo-500 to-indigo-600 px-5 py-2.5 text-xs font-bold text-white shadow-lg shadow-indigo-600/30 hover:brightness-110 active:scale-[0.98] transition-all"
+            >
+              <Sparkles className="h-4 w-4" />
+              <span>Launch Command Assistant</span>
+              <ArrowUpRight className="h-3.5 w-3.5 opacity-70" />
+            </button>
+
+            <span className="text-xs font-mono text-slate-400">
+              Ctrl+Enter to prompt from anywhere
+            </span>
+          </div>
+        </div>
+
+        {/* BENTO TILE 2: Safety & Success Metric Deck (4 cols) */}
+        <div className="bento-card lg:col-span-4 p-6 flex flex-col justify-between">
+          <div className="flex items-center justify-between pb-3 border-b border-white/[0.06]">
+            <span className="label-micro text-slate-300">Sandbox Reliability Score</span>
+            <CheckCircle2 className="h-4 w-4 text-emerald-400" />
+          </div>
+
+          <div className="my-auto py-4 text-center">
+            <div className="text-5xl font-extrabold tracking-tight text-emerald-400 tabular-nums">
+              {loading ? '...' : `${successRate.toFixed(1)}%`}
+            </div>
+            <span className="label-micro text-slate-400 mt-2 block">Policy Compliance Rate</span>
+          </div>
+
+          <div className="grid grid-cols-2 gap-2 pt-3 border-t border-white/[0.06] text-xs">
+            <div className="rounded-xl bg-slate-950/80 p-2.5 border border-white/[0.06]">
+              <span className="label-micro text-slate-400 block text-[9px]">Succeeded</span>
+              <span className="font-mono text-sm font-bold text-emerald-400 tabular-nums">
+                {summary?.successful_executions ?? 0}
+              </span>
+            </div>
+            <div className="rounded-xl bg-slate-950/80 p-2.5 border border-white/[0.06]">
+              <span className="label-micro text-slate-400 block text-[9px]">Violations Blocked</span>
+              <span className="font-mono text-sm font-bold text-rose-400 tabular-nums">
+                {summary?.failed_executions ?? 0}
+              </span>
+            </div>
+          </div>
         </div>
       </div>
 
       {error && (
-        <div className="flex items-center gap-3 rounded-xl border border-rose-500/30 bg-rose-950/30 p-4 text-sm text-rose-300">
-          <AlertTriangle className="h-5 w-5 shrink-0 text-rose-400" />
+        <div className="flex items-center gap-3 rounded-2xl border border-rose-500/30 bg-rose-950/20 p-4 text-xs text-rose-300 backdrop-blur-md">
+          <AlertTriangle className="h-4 w-4 shrink-0 text-rose-400" />
           <span>Error connecting to backend services: {error}</span>
         </div>
       )}
 
-      {/* Metrics Row */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {/* Total Generated */}
-        <div className="rounded-xl border border-slate-800/80 bg-slate-900/40 p-4 shadow-sm backdrop-blur-sm">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-slate-400">Total Generated</span>
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-500/10 text-indigo-400">
-              <Terminal className="h-4 w-4" />
+      {/* ========================================================================= */}
+      {/* SECOND BENTO ROW: 4 Metric Bento Tiles */}
+      {/* ========================================================================= */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        
+        {/* Total Synthesized */}
+        <div className="bento-card p-5">
+          <div className="flex items-center justify-between pb-3">
+            <span className="label-micro">Total Synthesized</span>
+            <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-indigo-500/15 text-indigo-400 border border-indigo-500/25">
+              <Terminal className="h-3.5 w-3.5" />
             </div>
           </div>
-          <div className="mt-3">
-            <span className="text-2xl font-bold tracking-tight text-white">
-              {loading ? '...' : summary?.total_generated ?? 0}
-            </span>
-            <p className="mt-1 text-[11px] text-slate-400">Prompt translations completed</p>
+          <div className="text-3xl font-extrabold text-white tabular-nums tracking-tight">
+            {loading ? '...' : summary?.total_generated ?? 0}
           </div>
+          <p className="mt-1.5 text-[11px] text-slate-400 font-mono">Commands generated by AI</p>
         </div>
 
-        {/* Successful Executions */}
-        <div className="rounded-xl border border-slate-800/80 bg-slate-900/40 p-4 shadow-sm backdrop-blur-sm">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-slate-400">Executed Successfully</span>
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-400">
-              <CheckCircle2 className="h-4 w-4" />
+        {/* Executed Cleanly */}
+        <div className="bento-card p-5">
+          <div className="flex items-center justify-between pb-3">
+            <span className="label-micro">Executed Cleanly</span>
+            <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-emerald-500/15 text-emerald-400 border border-emerald-500/25">
+              <CheckCircle2 className="h-3.5 w-3.5" />
             </div>
           </div>
-          <div className="mt-3">
-            <span className="text-2xl font-bold tracking-tight text-emerald-400">
-              {loading ? '...' : summary?.successful_executions ?? 0}
-            </span>
-            <p className="mt-1 text-[11px] text-slate-400">
-              Success Rate: <span className="text-slate-200 font-semibold">{summary?.success_rate?.toFixed(1) ?? '100'}%</span>
-            </p>
+          <div className="text-3xl font-extrabold text-emerald-400 tabular-nums tracking-tight">
+            {loading ? '...' : summary?.successful_executions ?? 0}
           </div>
+          <p className="mt-1.5 text-[11px] text-slate-400 font-mono">Sandbox runs (exit 0)</p>
         </div>
 
-        {/* Failed / Rejected */}
-        <div className="rounded-xl border border-slate-800/80 bg-slate-900/40 p-4 shadow-sm backdrop-blur-sm">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-slate-400">Failed / Blocked</span>
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-rose-500/10 text-rose-400">
-              <XCircle className="h-4 w-4" />
+        {/* Policy Interceptions */}
+        <div className="bento-card p-5">
+          <div className="flex items-center justify-between pb-3">
+            <span className="label-micro">Interceptions</span>
+            <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-rose-500/15 text-rose-400 border border-rose-500/25">
+              <XCircle className="h-3.5 w-3.5" />
             </div>
           </div>
-          <div className="mt-3">
-            <span className="text-2xl font-bold tracking-tight text-rose-400">
-              {loading ? '...' : summary?.failed_executions ?? 0}
-            </span>
-            <p className="mt-1 text-[11px] text-slate-400">Violations prevented by policy</p>
+          <div className="text-3xl font-extrabold text-rose-400 tabular-nums tracking-tight">
+            {loading ? '...' : summary?.failed_executions ?? 0}
           </div>
+          <p className="mt-1.5 text-[11px] text-slate-400 font-mono">Blocked destructive flags</p>
         </div>
 
         {/* Avg Duration */}
-        <div className="rounded-xl border border-slate-800/80 bg-slate-900/40 p-4 shadow-sm backdrop-blur-sm">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-slate-400">Avg Duration</span>
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-cyan-500/10 text-cyan-400">
-              <Clock className="h-4 w-4" />
+        <div className="bento-card p-5">
+          <div className="flex items-center justify-between pb-3">
+            <span className="label-micro">Lifecycle Latency</span>
+            <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-cyan-500/15 text-cyan-400 border border-cyan-500/25">
+              <Clock className="h-3.5 w-3.5" />
             </div>
           </div>
-          <div className="mt-3">
-            <span className="text-2xl font-bold tracking-tight text-cyan-300">
-              {loading ? '...' : `${summary?.average_duration_ms?.toFixed(1) ?? 0} ms`}
-            </span>
-            <p className="mt-1 text-[11px] text-slate-400">Container lifecycle latency</p>
+          <div className="text-3xl font-extrabold text-cyan-300 tabular-nums tracking-tight">
+            {loading ? '...' : `${summary?.average_duration_ms?.toFixed(1) ?? '0.0'} ms`}
           </div>
+          <p className="mt-1.5 text-[11px] text-slate-400 font-mono">Average execution time</p>
         </div>
       </div>
 
-      {/* Charts Section */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Resource Utilization Timeline */}
-        <div className="lg:col-span-2 rounded-xl border border-slate-800/80 bg-slate-900/30 p-5 shadow-sm">
-          <div className="flex items-center justify-between mb-4">
+      {/* ========================================================================= */}
+      {/* THIRD BENTO ROW: Resource Timeline (8 cols) + Live Activity Stream (4 cols) */}
+      {/* ========================================================================= */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
+        
+        {/* Resource Load Graph Bento (8 cols) */}
+        <div className="bento-card lg:col-span-8 p-6 space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-white/[0.06]">
             <div>
-              <h3 className="text-sm font-semibold text-white">System Resource Timeline</h3>
-              <p className="text-xs text-slate-400">Live CPU and memory load percentages</p>
+              <h3 className="text-sm font-semibold text-white tracking-tight">System Resource Timeline</h3>
+              <p className="text-xs text-slate-400">Live container and host CPU/RAM percentage distribution</p>
             </div>
-            <div className="flex items-center gap-4 text-xs font-mono">
+            <div className="flex items-center gap-3 text-xs font-mono">
               <div className="flex items-center gap-1.5 text-indigo-400">
-                <span className="h-2.5 w-2.5 rounded-full bg-indigo-500" />
+                <span className="h-2 w-2 rounded-full bg-indigo-500 shadow-[0_0_8px_rgba(99,102,241,0.6)]" />
                 <span>CPU %</span>
               </div>
               <div className="flex items-center gap-1.5 text-cyan-400">
-                <span className="h-2.5 w-2.5 rounded-full bg-cyan-500" />
+                <span className="h-2 w-2 rounded-full bg-cyan-400 shadow-[0_0_8px_rgba(34,211,238,0.6)]" />
                 <span>Memory %</span>
               </div>
             </div>
           </div>
+
           <div className="h-64 w-full">
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={timelineData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                 <defs>
-                  <linearGradient id="cpuGrad" x1="0" y1="0" x2="0" y2="1">
+                  <linearGradient id="colorCpu" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="5%" stopColor="#6366f1" stopOpacity={0.4} />
                     <stop offset="95%" stopColor="#6366f1" stopOpacity={0.0} />
                   </linearGradient>
-                  <linearGradient id="memGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#06b6d4" stopOpacity={0.4} />
+                  <linearGradient id="colorMem" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#06b6d4" stopOpacity={0.3} />
                     <stop offset="95%" stopColor="#06b6d4" stopOpacity={0.0} />
                   </linearGradient>
                 </defs>
-                <XAxis dataKey="time" stroke="#64748b" fontSize={11} tickLine={false} />
-                <YAxis stroke="#64748b" fontSize={11} domain={[0, 100]} tickLine={false} />
+                <XAxis dataKey="time" stroke="#475569" fontSize={11} tickLine={false} />
+                <YAxis stroke="#475569" fontSize={11} tickLine={false} unit="%" domain={[0, 100]} />
                 <Tooltip
-                  contentStyle={{ backgroundColor: '#0f172a', borderColor: '#334155', borderRadius: '8px' }}
-                  itemStyle={{ color: '#e2e8f0', fontSize: '12px' }}
+                  contentStyle={{
+                    backgroundColor: 'rgba(13, 18, 30, 0.9)',
+                    borderColor: 'rgba(255, 255, 255, 0.1)',
+                    borderRadius: '12px',
+                    fontSize: '11px',
+                    fontFamily: 'JetBrains Mono',
+                  }}
                 />
-                <Area type="monotone" dataKey="cpu" stroke="#6366f1" strokeWidth={2} fillOpacity={1} fill="url(#cpuGrad)" />
-                <Area type="monotone" dataKey="memory" stroke="#06b6d4" strokeWidth={2} fillOpacity={1} fill="url(#memGrad)" />
+                <Area type="monotone" dataKey="cpu" stroke="#6366f1" strokeWidth={2} fillOpacity={1} fill="url(#colorCpu)" name="CPU Load" />
+                <Area type="monotone" dataKey="memory" stroke="#06b6d4" strokeWidth={2} fillOpacity={1} fill="url(#colorMem)" name="Memory Load" />
               </AreaChart>
             </ResponsiveContainer>
           </div>
         </div>
 
-        {/* Execution Success Breakdown */}
-        <div className="rounded-xl border border-slate-800/80 bg-slate-900/30 p-5 shadow-sm flex flex-col justify-between">
+        {/* Live Command Activity Stream (4 cols) */}
+        <div className="bento-card lg:col-span-4 p-6 flex flex-col justify-between space-y-4">
           <div>
-            <h3 className="text-sm font-semibold text-white">Execution Success Ratio</h3>
-            <p className="text-xs text-slate-400">Policy passes vs rejections</p>
-          </div>
-          <div className="h-48 w-full flex items-center justify-center my-auto">
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie
-                  data={pieData}
-                  cx="50%"
-                  cy="50%"
-                  innerRadius={50}
-                  outerRadius={75}
-                  paddingAngle={5}
-                  dataKey="value"
-                >
-                  {pieData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.color} />
-                  ))}
-                </Pie>
-                <Tooltip
-                  contentStyle={{ backgroundColor: '#0f172a', borderColor: '#334155', borderRadius: '8px' }}
-                  itemStyle={{ color: '#e2e8f0', fontSize: '12px' }}
-                />
-              </PieChart>
-            </ResponsiveContainer>
-          </div>
-          <div className="space-y-1.5 pt-2 border-t border-slate-800">
-            <div className="flex items-center justify-between text-xs">
-              <span className="text-slate-400">Success Rate:</span>
-              <span className="font-mono text-emerald-400 font-semibold">{summary?.success_rate?.toFixed(1) ?? '100'}%</span>
+            <div className="flex items-center justify-between pb-3 border-b border-white/[0.06]">
+              <span className="label-micro text-slate-300">Live Command Audit Stream</span>
+              <span className="text-[10px] font-mono text-indigo-400">Recent</span>
             </div>
-            <div className="flex items-center justify-between text-xs">
-              <span className="text-slate-400">Executions Audited:</span>
-              <span className="font-mono text-slate-200">{summary?.total_executed ?? 0}</span>
-            </div>
-          </div>
-        </div>
-      </div>
 
-      {/* Recent Command Activity Table */}
-      <div className="rounded-xl border border-slate-800/80 bg-slate-900/30 p-5 shadow-sm">
-        <div className="flex items-center justify-between mb-4">
-          <div>
-            <h3 className="text-sm font-semibold text-white">Recent Execution Activity</h3>
-            <p className="text-xs text-slate-400">Latest commands audited by CommandForge</p>
-          </div>
-          <span className="text-xs text-indigo-400 font-mono">Real-time SQLite Feed</span>
-        </div>
-
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm">
-            <thead>
-              <tr className="border-b border-slate-800 text-[11px] font-mono uppercase tracking-wider text-slate-400">
-                <th className="pb-3 font-medium">Timestamp</th>
-                <th className="pb-3 font-medium">Prompt</th>
-                <th className="pb-3 font-medium">Command</th>
-                <th className="pb-3 font-medium">Risk</th>
-                <th className="pb-3 font-medium">Status</th>
-                <th className="pb-3 font-medium text-right">Duration</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-800/60 font-mono text-xs">
+            <div className="mt-3 space-y-2 max-h-72 overflow-y-auto">
               {summary?.recent_activity && summary.recent_activity.length > 0 ? (
-                summary.recent_activity.map((item) => (
-                  <tr
-                    key={item.id}
-                    onClick={() => onSelectRecord(item.id)}
-                    className="hover:bg-slate-800/40 cursor-pointer transition-colors"
+                summary.recent_activity.slice(0, 5).map((record) => (
+                  <div
+                    key={record.id}
+                    onClick={() => onSelectRecord(record.id)}
+                    className="group flex flex-col p-2.5 rounded-xl border border-white/[0.06] bg-slate-950/60 hover:border-indigo-500/40 hover:bg-slate-900/80 cursor-pointer transition-all"
                   >
-                    <td className="py-3 text-slate-400 whitespace-nowrap">{item.created_at}</td>
-                    <td className="py-3 font-sans text-slate-200 max-w-xs truncate">{item.prompt}</td>
-                    <td className="py-3 text-indigo-300 font-semibold max-w-xs truncate">
-                      <code>{item.command}</code>
-                    </td>
-                    <td className="py-3 whitespace-nowrap">
+                    <div className="flex items-center justify-between">
+                      <span className="font-mono text-xs font-semibold text-emerald-400 truncate max-w-[200px]">
+                        ${record.command}
+                      </span>
                       <span
-                        className={`inline-flex rounded px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider ${
-                          item.risk_level === 'high'
-                            ? 'bg-rose-500/20 text-rose-300 border border-rose-500/30'
-                            : item.risk_level === 'medium'
-                            ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
-                            : 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
+                        className={`text-[9px] font-mono px-1.5 py-0.5 rounded ${
+                          record.status === 'success'
+                            ? 'bg-emerald-500/10 text-emerald-400'
+                            : 'bg-rose-500/10 text-rose-400'
                         }`}
                       >
-                        {item.risk_level}
+                        {record.status}
                       </span>
-                    </td>
-                    <td className="py-3 whitespace-nowrap">
-                      <span
-                        className={`inline-flex items-center gap-1 ${
-                          item.status === 'success'
-                            ? 'text-emerald-400'
-                            : item.status === 'rejected'
-                            ? 'text-rose-400'
-                            : 'text-amber-400'
-                        }`}
-                      >
-                        {item.status === 'success' ? (
-                          <CheckCircle2 className="h-3.5 w-3.5" />
-                        ) : (
-                          <XCircle className="h-3.5 w-3.5" />
-                        )}
-                        <span className="capitalize">{item.status}</span>
-                      </span>
-                    </td>
-                    <td className="py-3 text-right text-slate-400 whitespace-nowrap">
-                      {item.duration_ms.toFixed(1)} ms
-                    </td>
-                  </tr>
+                    </div>
+                    <span className="text-[11px] text-slate-400 truncate mt-1">
+                      {record.prompt || 'Direct shell prompt'}
+                    </span>
+                  </div>
                 ))
               ) : (
-                <tr>
-                  <td colSpan={6} className="py-8 text-center text-slate-400 font-sans">
-                    No recent command activity. Use the Command Assistant to generate and run your first command!
-                  </td>
-                </tr>
+                <div className="py-8 text-center text-xs text-slate-500 italic">
+                  No execution activity recorded yet.
+                </div>
               )}
-            </tbody>
-          </table>
+            </div>
+          </div>
+
+          <button
+            onClick={onNavigateAssistant}
+            className="w-full flex items-center justify-center gap-1.5 rounded-xl border border-white/[0.08] bg-slate-950 py-2.5 text-xs font-bold text-slate-300 hover:text-white hover:border-indigo-500/40 transition-all"
+          >
+            <span>Execute New Command</span>
+            <ChevronRight className="h-3.5 w-3.5" />
+          </button>
         </div>
       </div>
     </div>
