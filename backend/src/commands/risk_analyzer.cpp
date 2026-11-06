@@ -87,6 +87,34 @@ void RiskAnalyzer::initializeRules() {
         true
     });
 
+    rules_.push_back({
+        std::regex(R"((python[0-9.]*|perl|php|ruby|lua)\s+.*(-c|-e|-r)\s+.*(socket|pty|connect|fsockopen))", std::regex_constants::icase),
+        "Scripting interpreter reverse shell or network socket connection prohibited.",
+        RiskLevel::High,
+        true
+    });
+
+    rules_.push_back({
+        std::regex(R"((mkfifo|mknod)\s+.*\|\s*(sh|bash|zsh))", std::regex_constants::icase),
+        "Named pipe or FIFO shell redirection prohibited.",
+        RiskLevel::High,
+        true
+    });
+
+    rules_.push_back({
+        std::regex(R"((\.ssh\/(id_rsa|id_ed25519|id_ecdsa|authorized_keys)|\.aws\/credentials|\.kube\/config))", std::regex_constants::icase),
+        "Access to sensitive authentication keys or cloud credentials prohibited.",
+        RiskLevel::High,
+        true
+    });
+
+    rules_.push_back({
+        std::regex(R"((xmrig|minerd|cryptonight|stratum\+tcp))", std::regex_constants::icase),
+        "Cryptocurrency mining tool or pool connection prohibited.",
+        RiskLevel::High,
+        true
+    });
+
     // High Risk Rules (Allowed with strict user confirmation)
     rules_.push_back({
         std::regex(R"(rm\s+-[a-zA-Z]*r)", std::regex_constants::icase),
