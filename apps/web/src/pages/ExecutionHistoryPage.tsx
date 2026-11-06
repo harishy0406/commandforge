@@ -18,6 +18,7 @@ import {
   RotateCcw,
   SlidersHorizontal,
   ExternalLink,
+  Download,
 } from 'lucide-react';
 import { CommandRecord } from '../types/api';
 import { ApiService } from '../services/api';
@@ -82,6 +83,40 @@ export const ExecutionHistoryPage: React.FC<ExecutionHistoryPageProps> = ({
 
   const totalPages = Math.max(1, Math.ceil(total / 15));
 
+  const handleExportJson = () => {
+    if (records.length === 0) return;
+    const dataStr = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(records, null, 2));
+    const downloadAnchor = document.createElement('a');
+    downloadAnchor.setAttribute('href', dataStr);
+    downloadAnchor.setAttribute('download', `commandforge-audit-${new Date().toISOString().slice(0, 10)}.json`);
+    document.body.appendChild(downloadAnchor);
+    downloadAnchor.click();
+    downloadAnchor.remove();
+  };
+
+  const handleExportCsv = () => {
+    if (records.length === 0) return;
+    const headers = ['id', 'created_at', 'prompt', 'command', 'risk_level', 'status', 'exit_code', 'duration_ms'];
+    const rows = records.map((r) => [
+      `"${r.id}"`,
+      `"${r.created_at}"`,
+      `"${(r.prompt || '').replace(/"/g, '""')}"`,
+      `"${(r.command || '').replace(/"/g, '""')}"`,
+      `"${r.risk_level}"`,
+      `"${r.status}"`,
+      r.exit_code !== undefined ? r.exit_code : '',
+      r.duration_ms.toFixed(1),
+    ]);
+    const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map((e) => e.join(','))].join('\n');
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement('a');
+    link.setAttribute('href', encodedUri);
+    link.setAttribute('download', `commandforge-audit-${new Date().toISOString().slice(0, 10)}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+  };
+
   // Compute summary stats from loaded records
   const successCount = records.filter((r) => r.status === 'success').length;
   const rejectedCount = records.filter((r) => r.status === 'rejected' || r.status === 'blocked').length;
@@ -103,23 +138,48 @@ export const ExecutionHistoryPage: React.FC<ExecutionHistoryPageProps> = ({
                 Execution Audit Trail & History
               </h2>
             </div>
-            <div className="flex items-center gap-1.5 bg-slate-950/80 border border-slate-800 rounded-lg p-1">
-              {['all', 'success', 'failed', 'rejected'].map((st) => (
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="flex items-center gap-1.5 bg-slate-950/80 border border-slate-800 rounded-lg p-1">
+                {['all', 'success', 'failed', 'rejected'].map((st) => (
+                  <button
+                    key={st}
+                    onClick={() => {
+                      setStatusFilter(st);
+                      setPage(1);
+                    }}
+                    className={`rounded-md px-2.5 py-1 text-xs font-mono capitalize transition-all ${
+                      statusFilter === st
+                        ? 'bg-indigo-600 text-white font-semibold shadow-sm shadow-indigo-500/20'
+                        : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900'
+                    }`}
+                  >
+                    {st}
+                  </button>
+                ))}
+              </div>
+
+              <div className="flex items-center gap-1 bg-slate-950/80 border border-slate-800 rounded-lg p-1">
                 <button
-                  key={st}
-                  onClick={() => {
-                    setStatusFilter(st);
-                    setPage(1);
-                  }}
-                  className={`rounded-md px-2.5 py-1 text-xs font-mono capitalize transition-all ${
-                    statusFilter === st
-                      ? 'bg-indigo-600 text-white font-semibold shadow-sm shadow-indigo-500/20'
-                      : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900'
-                  }`}
+                  type="button"
+                  onClick={handleExportJson}
+                  disabled={records.length === 0}
+                  className="flex items-center gap-1 rounded px-2 py-1 text-[11px] font-mono text-slate-400 hover:text-indigo-300 hover:bg-slate-900 disabled:opacity-40 transition-colors"
+                  title="Export audit records as JSON"
                 >
-                  {st}
+                  <Download className="h-3 w-3 text-indigo-400" />
+                  <span>JSON</span>
                 </button>
-              ))}
+                <button
+                  type="button"
+                  onClick={handleExportCsv}
+                  disabled={records.length === 0}
+                  className="flex items-center gap-1 rounded px-2 py-1 text-[11px] font-mono text-slate-400 hover:text-cyan-300 hover:bg-slate-900 disabled:opacity-40 transition-colors"
+                  title="Export audit records as CSV"
+                >
+                  <Download className="h-3 w-3 text-cyan-400" />
+                  <span>CSV</span>
+                </button>
+              </div>
             </div>
           </div>
 

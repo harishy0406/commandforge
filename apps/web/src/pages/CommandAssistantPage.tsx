@@ -24,6 +24,7 @@ import {
   HardDrive,
   FileCode,
   CornerDownLeft,
+  History,
 } from 'lucide-react';
 import { GeneratedCommand, ExecutionResult, RiskLevel } from '../types/api';
 import { ApiService } from '../services/api';
@@ -50,6 +51,17 @@ export const CommandAssistantPage: React.FC = () => {
   const [activeProvider, setActiveProvider] = useState<string>('');
   const [activeModel, setActiveModel] = useState<string>('');
   const [isDockerReady, setIsDockerReady] = useState(false);
+
+  // In-session prompt recall history
+  const [promptHistory, setPromptHistory] = useState<string[]>(() => {
+    try {
+      const saved = sessionStorage.getItem('cf_prompt_history');
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
+  const [showHistoryDropdown, setShowHistoryDropdown] = useState(false);
 
   const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -127,6 +139,14 @@ export const CommandAssistantPage: React.FC = () => {
       setIsEditing(false);
       if (res.provider) setActiveProvider(res.provider);
       if (res.model) setActiveModel(res.model);
+
+      setPromptHistory((prev) => {
+        const next = [q, ...prev.filter((p) => p !== q)].slice(0, 10);
+        try {
+          sessionStorage.setItem('cf_prompt_history', JSON.stringify(next));
+        } catch {}
+        return next;
+      });
     } catch (err: any) {
       setError(err.message || 'Failed to generate command');
     } finally {
@@ -303,9 +323,43 @@ export const CommandAssistantPage: React.FC = () => {
               </div>
             </div>
 
-            {/* Quick Try Prompt Pills */}
-            <div className="mt-4 space-y-1.5">
-              <span className="label-micro text-slate-400 block">Quick Inspection Presets:</span>
+            {/* Quick Try Prompt Pills & In-Session History */}
+            <div className="mt-4 space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="label-micro text-slate-400 block">Quick Inspection Presets:</span>
+                {promptHistory.length > 0 && (
+                  <div className="relative">
+                    <button
+                      type="button"
+                      onClick={() => setShowHistoryDropdown(!showHistoryDropdown)}
+                      className="inline-flex items-center gap-1.5 rounded-md px-2 py-0.5 text-[11px] font-mono text-indigo-400 hover:text-indigo-300 hover:bg-slate-900 border border-indigo-500/20 transition-colors"
+                      title="Recall previously generated prompts in this session"
+                    >
+                      <History className="h-3 w-3" />
+                      <span>Recent ({promptHistory.length})</span>
+                    </button>
+                    {showHistoryDropdown && (
+                      <div className="absolute right-0 top-7 z-30 w-72 rounded-xl border border-slate-800 bg-slate-950 p-2 shadow-2xl space-y-1 animate-in fade-in zoom-in-95">
+                        <span className="label-micro text-slate-500 block px-2 py-1">In-Session Prompts:</span>
+                        {promptHistory.map((p, idx) => (
+                          <button
+                            key={idx}
+                            type="button"
+                            onClick={() => {
+                              setPrompt(p);
+                              setShowHistoryDropdown(false);
+                            }}
+                            className="w-full text-left rounded-lg px-2.5 py-1.5 text-xs text-slate-300 hover:bg-slate-900 hover:text-white truncate transition-colors font-mono"
+                          >
+                            {p}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+
               <div className="flex flex-wrap gap-2">
                 {examplePrompts.map((ex, i) => (
                   <button

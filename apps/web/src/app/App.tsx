@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Sidebar, NavItem } from '../components/layout/Sidebar';
 import { Header } from '../components/layout/Header';
+import { CommandPalette } from '../components/layout/CommandPalette';
 import { OverviewPage } from '../pages/OverviewPage';
 import { CommandAssistantPage } from '../pages/CommandAssistantPage';
 import { ExecutionHistoryPage } from '../pages/ExecutionHistoryPage';
@@ -18,6 +19,7 @@ export const App: React.FC = () => {
   const [aiModel, setAiModel] = useState('');
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [selectedRecordId, setSelectedRecordId] = useState<string | null>(null);
+  const [isPaletteOpen, setIsPaletteOpen] = useState(false);
 
   const checkHealth = async () => {
     try {
@@ -41,6 +43,18 @@ export const App: React.FC = () => {
     checkHealth();
     const interval = setInterval(checkHealth, 10000);
     return () => clearInterval(interval);
+  }, []);
+
+  // Global keyboard shortcuts (Ctrl+K or Cmd+K)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        setIsPaletteOpen((prev) => !prev);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
   const handleSelectRecord = (id: string) => {
@@ -76,6 +90,7 @@ export const App: React.FC = () => {
           aiModel={aiModel}
           onRefresh={checkHealth}
           onNavigateAssistant={() => setCurrentTab('assistant')}
+          onOpenPalette={() => setIsPaletteOpen(true)}
           isRefreshing={isRefreshing}
         />
 
@@ -104,6 +119,20 @@ export const App: React.FC = () => {
           {currentTab === 'about' && (
             <AboutModal onClose={() => setCurrentTab('overview')} />
           )}
+
+          {/* Global Command Palette */}
+          <CommandPalette
+            isOpen={isPaletteOpen}
+            onClose={() => setIsPaletteOpen(false)}
+            onSelectTab={(tab) => {
+              if (tab === 'about') {
+                setCurrentTab('about');
+              } else {
+                setCurrentTab(tab);
+              }
+            }}
+            onTriggerRefresh={checkHealth}
+          />
         </main>
       </div>
     </div>
