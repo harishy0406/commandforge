@@ -32,6 +32,7 @@ public:
     nlohmann::json handleCancelExecution(const std::string& id);
     nlohmann::json handlePurgeHistory(int older_than_days = 0);
     nlohmann::json handleGetSystemMetrics();
+    nlohmann::json handleGetSystemDiagnostics();
     nlohmann::json handleGetSettings();
     nlohmann::json handleUpdateSettings(const nlohmann::json& requestBody);
     nlohmann::json handleGetAIProviders();

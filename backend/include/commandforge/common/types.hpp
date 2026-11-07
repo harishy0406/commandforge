@@ -196,6 +196,46 @@ struct SystemMetrics {
     }
 };
 
+struct SystemDiagnostics {
+    std::string os_platform;
+    std::string architecture;
+    int logical_cores{1};
+    double memory_rss_mb{0.0};
+    uint64_t uptime_seconds{0};
+    std::string compiler;
+    std::string metrics_source;
+    bool docker_available{false};
+    std::string docker_mode;
+    std::string docker_socket;
+    int active_ast_rules{18};
+    std::string storage_engine{"SQLite3 WAL"};
+
+    nlohmann::json toJson() const {
+        return {
+            {"os_platform", os_platform},
+            {"architecture", architecture},
+            {"logical_cores", logical_cores},
+            {"memory_rss_mb", memory_rss_mb},
+            {"uptime_seconds", uptime_seconds},
+            {"compiler", compiler},
+            {"metrics_source", metrics_source},
+            {"docker", {
+                {"available", docker_available},
+                {"mode", docker_mode},
+                {"socket", docker_socket}
+            }},
+            {"security", {
+                {"active_ast_rules", active_ast_rules},
+                {"enforcement_mode", "strict_drop_capabilities"}
+            }},
+            {"storage", {
+                {"engine", storage_engine},
+                {"journal_mode", "WAL"}
+            }}
+        };
+    }
+};
+
 struct DashboardSummary {
     int total_generated{0};
     int total_executed{0};

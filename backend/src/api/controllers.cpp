@@ -193,6 +193,14 @@ nlohmann::json ApiController::handleGetSystemMetrics() {
     return {{"error", "System monitor is not active"}};
 }
 
+nlohmann::json ApiController::handleGetSystemDiagnostics() {
+    if (system_monitor_) {
+        bool dockerAvail = execution_engine_ ? execution_engine_->isDockerAvailable() : false;
+        return system_monitor_->getDiagnostics(dockerAvail).toJson();
+    }
+    return {{"error", "System monitor is not active"}};
+}
+
 nlohmann::json ApiController::handleGetSettings() {
     return config_.toPublicJson();
 }

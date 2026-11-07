@@ -143,6 +143,13 @@ void HttpServer::setupRoutes() {
         sendJson(res, response, status);
     });
 
+    // GET /api/system/diagnostics
+    server_.Get("/api/system/diagnostics", [this](const httplib::Request&, httplib::Response& res) {
+        auto response = controller_->handleGetSystemDiagnostics();
+        int status = response.contains("error") ? 503 : 200;
+        sendJson(res, response, status);
+    });
+
     // GET /api/settings
     server_.Get("/api/settings", [this](const httplib::Request&, httplib::Response& res) {
         sendJson(res, controller_->handleGetSettings());
