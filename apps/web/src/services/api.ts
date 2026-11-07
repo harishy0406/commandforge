@@ -114,4 +114,14 @@ export class ApiService {
     if (!res.ok) throw new Error(`Failed to update settings`);
     return res.json();
   }
+
+  static async purgeHistory(olderThanDays = 0): Promise<{ status: string; purged_count: number; older_than_days: number }> {
+    const res = await fetch(`${API_BASE}/commands/history/purge`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ older_than_days: olderThanDays }),
+    });
+    if (!res.ok) throw new Error(`Failed to purge history: ${res.statusText}`);
+    return res.json();
+  }
 }

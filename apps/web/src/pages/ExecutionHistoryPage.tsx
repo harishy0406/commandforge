@@ -19,6 +19,7 @@ import {
   SlidersHorizontal,
   ExternalLink,
   Download,
+  Trash2,
 } from 'lucide-react';
 import { CommandRecord } from '../types/api';
 import { ApiService } from '../services/api';
@@ -42,6 +43,9 @@ export const ExecutionHistoryPage: React.FC<ExecutionHistoryPageProps> = ({
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [copiedModalCmd, setCopiedModalCmd] = useState(false);
   const [copiedModalOut, setCopiedModalOut] = useState(false);
+  const [showPurgeModal, setShowPurgeModal] = useState(false);
+  const [purgeDaysOption, setPurgeDaysOption] = useState<number>(30);
+  const [isPurging, setIsPurging] = useState(false);
 
   const loadHistory = async () => {
     try {
@@ -117,6 +121,20 @@ export const ExecutionHistoryPage: React.FC<ExecutionHistoryPageProps> = ({
     link.remove();
   };
 
+  const handleConfirmPurge = async () => {
+    try {
+      setIsPurging(true);
+      await ApiService.purgeHistory(purgeDaysOption);
+      setShowPurgeModal(false);
+      setPage(1);
+      await loadHistory();
+    } catch (err) {
+      console.error('Failed to purge history:', err);
+    } finally {
+      setIsPurging(false);
+    }
+  };
+
   // Compute summary stats from loaded records
   const successCount = records.filter((r) => r.status === 'success').length;
   const rejectedCount = records.filter((r) => r.status === 'rejected' || r.status === 'blocked').length;
@@ -178,6 +196,17 @@ export const ExecutionHistoryPage: React.FC<ExecutionHistoryPageProps> = ({
                 >
                   <Download className="h-3 w-3 text-cyan-400" />
                   <span>CSV</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setShowPurgeModal(true)}
+                  disabled={total === 0}
+                  className="flex items-center gap-1 rounded px-2 py-1 text-[11px] font-mono text-slate-400 hover:text-rose-400 hover:bg-rose-950/20 disabled:opacity-40 transition-colors border-l border-slate-800"
+                  title="Purge audit records by retention age or clear all"
+                >
+                  <Trash2 className="h-3 w-3 text-rose-400" />
+                  <span>Purge</span>
                 </button>
               </div>
             </div>
@@ -580,6 +609,76 @@ export const ExecutionHistoryPage: React.FC<ExecutionHistoryPageProps> = ({
                 className="rounded-xl bg-slate-900 border border-slate-800 px-5 py-2 text-xs font-semibold text-slate-200 hover:bg-slate-800 hover:text-white transition-colors"
               >
                 Close Audit Record
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Audit Ledger Purge Modal */}
+      {showPurgeModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-in fade-in duration-150">
+          <div className="w-full max-w-md rounded-2xl border border-slate-800 bg-slate-950 p-6 shadow-2xl space-y-5 animate-in zoom-in-95 duration-150">
+            <div className="flex items-center justify-between border-b border-slate-800/80 pb-3">
+              <div className="flex items-center gap-2.5 text-rose-400">
+                <Trash2 className="h-5 w-5" />
+                <h3 className="text-base font-bold text-white tracking-tight">Purge Audit Ledger</h3>
+              </div>
+              <button
+                onClick={() => setShowPurgeModal(false)}
+                className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-900 hover:text-white"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            <p className="text-xs text-slate-300 leading-relaxed">
+              Select an audit retention window to prune old SQLite execution logs, or clear the entire history. This operation is permanent.
+            </p>
+
+            <div className="space-y-2 font-mono text-xs">
+              {[
+                { label: 'Purge records older than 30 days', days: 30 },
+                { label: 'Purge records older than 7 days', days: 7 },
+                { label: 'Purge entire history (All records)', days: 0 },
+              ].map((opt) => (
+                <label
+                  key={opt.days}
+                  className={`flex items-center justify-between p-3 rounded-xl border cursor-pointer transition-all ${
+                    purgeDaysOption === opt.days
+                      ? 'border-rose-500/50 bg-rose-950/20 text-rose-200'
+                      : 'border-slate-800 bg-slate-900/40 text-slate-400 hover:border-slate-700'
+                  }`}
+                >
+                  <div className="flex items-center gap-2.5">
+                    <input
+                      type="radio"
+                      name="purgeOption"
+                      checked={purgeDaysOption === opt.days}
+                      onChange={() => setPurgeDaysOption(opt.days)}
+                      className="text-rose-600 focus:ring-0 bg-slate-900 border-slate-700"
+                    />
+                    <span>{opt.label}</span>
+                  </div>
+                </label>
+              ))}
+            </div>
+
+            <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-800/80">
+              <button
+                type="button"
+                onClick={() => setShowPurgeModal(false)}
+                className="rounded-xl border border-slate-800 bg-slate-900 px-4 py-2 text-xs font-semibold text-slate-300 hover:bg-slate-800"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmPurge}
+                disabled={isPurging}
+                className="rounded-xl bg-rose-600 px-5 py-2 text-xs font-bold text-white shadow-lg shadow-rose-600/30 hover:bg-rose-500 disabled:opacity-50 transition-all"
+              >
+                {isPurging ? 'Purging...' : 'Confirm Purge'}
               </button>
             </div>
           </div>
