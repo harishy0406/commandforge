@@ -8,6 +8,7 @@ import {
   HistoryResponse,
   ServerSettings,
   SystemMetrics,
+  SystemDiagnostics,
   ValidationResult,
   AIProvidersResponse
 } from '../types/api';
@@ -96,6 +97,12 @@ export class ApiService {
   static async getSystemMetrics(): Promise<SystemMetrics> {
     const res = await fetch(`${API_BASE}/system/metrics`);
     if (!res.ok) throw new Error(`Failed to load metrics`);
+    return res.json();
+  }
+
+  static async getSystemDiagnostics(): Promise<SystemDiagnostics> {
+    const res = await fetch(`${API_BASE}/system/diagnostics`);
+    if (!res.ok) throw new Error(`Failed to load system diagnostics`);
     return res.json();
   }
 

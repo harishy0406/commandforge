@@ -24,11 +24,12 @@ import {
   ResponsiveContainer,
   CartesianGrid,
 } from 'recharts';
-import { SystemMetrics } from '../types/api';
+import { SystemMetrics, SystemDiagnostics } from '../types/api';
 import { ApiService } from '../services/api';
 
 export const SystemMonitorPage: React.FC = () => {
   const [metrics, setMetrics] = useState<SystemMetrics | null>(null);
+  const [diagnostics, setDiagnostics] = useState<SystemDiagnostics | null>(null);
   const [chartHistory, setChartHistory] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -37,12 +38,23 @@ export const SystemMonitorPage: React.FC = () => {
   const [isPolling, setIsPolling] = useState(false);
   const [sampleCount, setSampleCount] = useState(0);
 
+  const formatUptime = (secs: number) => {
+    const h = Math.floor(secs / 3600);
+    const m = Math.floor((secs % 3600) / 60);
+    const s = secs % 60;
+    return `${h}h ${m}m ${s}s`;
+  };
+
   const fetchMetrics = async () => {
     try {
       setIsPolling(true);
       setError(null);
-      const m = await ApiService.getSystemMetrics();
+      const [m, diag] = await Promise.all([
+        ApiService.getSystemMetrics(),
+        ApiService.getSystemDiagnostics().catch(() => null),
+      ]);
       setMetrics(m);
+      if (diag) setDiagnostics(diag);
       setSampleCount((prev) => prev + 1);
 
       const timeLabel = m.timestamp.split(' ')[1] || m.timestamp;
@@ -441,43 +453,49 @@ export const SystemMonitorPage: React.FC = () => {
           </div>
         </div>
 
-        {/* Bento Tile 6: Execution Subsystem Topology (12 cols) */}
+        {/* Bento Tile 6: Execution Subsystem Topology & Live Diagnostics (12 cols) */}
         <div className="bento-card md:col-span-12 p-5 space-y-4">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-800/80 pb-3">
             <div>
-              <span className="label-micro text-slate-400">Subsystem Architecture</span>
+              <span className="label-micro text-slate-400">Subsystem Architecture & Live Probe</span>
               <h3 className="text-sm font-bold text-white tracking-tight mt-0.5">
-                C++ Systems Stack & Runtime Topography
+                C++ Systems Stack & Runtime Diagnostics
               </h3>
             </div>
-            <span className="text-xs font-mono text-slate-400">
-              PID / Runtime State: NOMINAL
-            </span>
+            <div className="flex items-center gap-3 text-xs font-mono">
+              <span className="text-slate-400">
+                Engine Uptime: <strong className="text-white">{diagnostics ? formatUptime(diagnostics.uptime_seconds) : '...'}</strong>
+              </span>
+              <span className="text-slate-600">|</span>
+              <span className="text-indigo-400">
+                Memory RSS: <strong className="text-white">{diagnostics ? `${diagnostics.memory_rss_mb.toFixed(1)} MB` : '...'}</strong>
+              </span>
+            </div>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-xs font-mono">
             <div className="rounded-xl border border-slate-800 bg-slate-950/70 p-3.5 space-y-1">
-              <span className="text-slate-500 uppercase text-[10px] tracking-wider">REST HTTP Layer</span>
-              <p className="text-slate-200 font-bold text-sm">Drogon / Non-blocking</p>
-              <p className="text-[11px] text-slate-400">Async epoll/IOCP event loop</p>
+              <span className="text-slate-500 uppercase text-[10px] tracking-wider">Host Platform & Cores</span>
+              <p className="text-slate-200 font-bold text-sm truncate">{diagnostics?.os_platform || 'POSIX Kernel'}</p>
+              <p className="text-[11px] text-slate-400">{diagnostics ? `${diagnostics.logical_cores} Cores (${diagnostics.architecture})` : 'x86_64'}</p>
             </div>
 
             <div className="rounded-xl border border-slate-800 bg-slate-950/70 p-3.5 space-y-1">
-              <span className="text-slate-500 uppercase text-[10px] tracking-wider">Command AST Policy</span>
-              <p className="text-indigo-300 font-bold text-sm">14 Rules Evaluated</p>
-              <p className="text-[11px] text-slate-400">Pre-execution static analysis</p>
+              <span className="text-slate-500 uppercase text-[10px] tracking-wider">AST Policy Safety Deck</span>
+              <p className="text-indigo-300 font-bold text-sm">{diagnostics ? `${diagnostics.security.active_ast_rules} Rules Active` : '18 Rules Active'}</p>
+              <p className="text-[11px] text-slate-400">Reverse-shell & exfil guards</p>
             </div>
 
             <div className="rounded-xl border border-slate-800 bg-slate-950/70 p-3.5 space-y-1">
-              <span className="text-slate-500 uppercase text-[10px] tracking-wider">Isolation Engine</span>
-              <p className="text-cyan-300 font-bold text-sm">Docker Engine API / Subproc</p>
-              <p className="text-[11px] text-slate-400">UID 1000 unprivileged runner</p>
+              <span className="text-slate-500 uppercase text-[10px] tracking-wider">Docker Daemon Probe</span>
+              <p className="text-cyan-300 font-bold text-sm truncate">{diagnostics?.docker.mode || 'Container Sandbox'}</p>
+              <p className="text-[11px] text-slate-400 truncate">{diagnostics?.docker.socket || '/var/run/docker.sock'}</p>
             </div>
 
             <div className="rounded-xl border border-slate-800 bg-slate-950/70 p-3.5 space-y-1">
-              <span className="text-slate-500 uppercase text-[10px] tracking-wider">Audit Persistence</span>
-              <p className="text-emerald-300 font-bold text-sm">SQLite3 WAL Mode</p>
-              <p className="text-[11px] text-slate-400">Zero-allocation query transactions</p>
+              <span className="text-slate-500 uppercase text-[10px] tracking-wider">Compiler & Persistence</span>
+              <p className="text-emerald-300 font-bold text-sm">{diagnostics?.storage.engine || 'SQLite3 WAL'}</p>
+              <p className="text-[11px] text-slate-400 truncate">{diagnostics?.compiler || 'C++20 Engine'}</p>
             </div>
           </div>
         </div>
