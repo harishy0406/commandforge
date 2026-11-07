@@ -288,18 +288,34 @@ export const OverviewPage: React.FC<OverviewPageProps> = ({
                     className="group flex flex-col p-2.5 rounded-xl border border-white/[0.06] bg-slate-950/60 hover:border-indigo-500/40 hover:bg-slate-900/80 cursor-pointer transition-all"
                   >
                     <div className="flex items-center justify-between">
-                      <span className="font-mono text-xs font-semibold text-emerald-400 truncate max-w-[200px]">
+                      <span className="font-mono text-xs font-semibold text-emerald-400 truncate max-w-[170px]">
                         ${record.command}
                       </span>
-                      <span
-                        className={`text-[9px] font-mono px-1.5 py-0.5 rounded ${
-                          record.status === 'success'
-                            ? 'bg-emerald-500/10 text-emerald-400'
-                            : 'bg-rose-500/10 text-rose-400'
-                        }`}
-                      >
-                        {record.status}
-                      </span>
+                      <div className="flex items-center gap-1.5">
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (record.prompt) {
+                              sessionStorage.setItem('cf_active_prompt', record.prompt);
+                            }
+                            onNavigateAssistant();
+                          }}
+                          className="opacity-0 group-hover:opacity-100 p-0.5 rounded text-slate-400 hover:text-indigo-400 hover:bg-slate-800 transition-all"
+                          title="Open and synthesize this prompt in Command Assistant"
+                        >
+                          <Sparkles className="h-3 w-3" />
+                        </button>
+                        <span
+                          className={`text-[9px] font-mono px-1.5 py-0.5 rounded ${
+                            record.status === 'success'
+                              ? 'bg-emerald-500/10 text-emerald-400'
+                              : 'bg-rose-500/10 text-rose-400'
+                          }`}
+                        >
+                          {record.status}
+                        </span>
+                      </div>
                     </div>
                     <span className="text-[11px] text-slate-400 truncate mt-1">
                       {record.prompt || 'Direct shell prompt'}
