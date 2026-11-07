@@ -18,6 +18,7 @@ public:
                                                  int& totalOut) = 0;
     virtual std::optional<CommandRecord> getById(const std::string& id) = 0;
     virtual DashboardSummary getSummary() = 0;
+    virtual int purgeHistory(int older_than_days = 0) = 0;
 };
 
 } // namespace commandforge

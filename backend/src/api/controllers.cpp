@@ -174,9 +174,29 @@ nlohmann::json ApiController::handleCancelExecution(const std::string& id) {
     };
 }
 
+nlohmann::json ApiController::handlePurgeHistory(int older_than_days) {
+    if (!repository_) {
+        return {{"error", "History repository is not initialized"}};
+    }
+    int purged = repository_->purgeHistory(older_than_days);
+    return {
+        {"status", "success"},
+        {"purged_count", purged},
+        {"older_than_days", older_than_days}
+    };
+}
+
 nlohmann::json ApiController::handleGetSystemMetrics() {
     if (system_monitor_) {
         return system_monitor_->getMetrics().toJson();
+    }
+    return {{"error", "System monitor is not active"}};
+}
+
+nlohmann::json ApiController::handleGetSystemDiagnostics() {
+    if (system_monitor_) {
+        bool dockerAvail = execution_engine_ ? execution_engine_->isDockerAvailable() : false;
+        return system_monitor_->getDiagnostics(dockerAvail).toJson();
     }
     return {{"error", "System monitor is not active"}};
 }

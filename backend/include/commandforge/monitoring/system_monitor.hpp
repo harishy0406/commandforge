@@ -12,6 +12,7 @@ public:
     ~SystemMonitor() = default;
 
     SystemMetrics getMetrics();
+    SystemDiagnostics getDiagnostics(bool dockerAvailable);
 
 private:
     std::mutex mutex_;

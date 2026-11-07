@@ -20,6 +20,7 @@ public:
                                          int& totalOut) override;
     std::optional<CommandRecord> getById(const std::string& id) override;
     DashboardSummary getSummary() override;
+    int purgeHistory(int older_than_days = 0) override;
 
 private:
     std::string db_path_;

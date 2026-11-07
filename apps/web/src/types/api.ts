@@ -76,6 +76,29 @@ export interface SystemMetrics {
   metrics_source: string;
 }
 
+export interface SystemDiagnostics {
+  os_platform: string;
+  architecture: string;
+  logical_cores: number;
+  memory_rss_mb: number;
+  uptime_seconds: number;
+  compiler: string;
+  metrics_source: string;
+  docker: {
+    available: boolean;
+    mode: string;
+    socket: string;
+  };
+  security: {
+    active_ast_rules: number;
+    enforcement_mode: string;
+  };
+  storage: {
+    engine: string;
+    journal_mode: string;
+  };
+}
+
 export interface DashboardSummary {
   total_generated: number;
   total_executed: number;

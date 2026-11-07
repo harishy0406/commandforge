@@ -202,4 +202,50 @@ SystemMetrics SystemMonitor::getMetrics() {
     return m;
 }
 
+SystemDiagnostics SystemMonitor::getDiagnostics(bool dockerAvailable) {
+    std::lock_guard<std::mutex> lock(mutex_);
+    SystemDiagnostics diag;
+#if defined(_WIN32) || defined(_WIN64)
+    diag.os_platform = "Windows NT (Host Execution Engine)";
+    diag.architecture = "x86_64";
+    SYSTEM_INFO si;
+    GetSystemInfo(&si);
+    diag.logical_cores = static_cast<int>(si.dwNumberOfProcessors);
+    diag.compiler = "Clang / MinGW C++20";
+    diag.metrics_source = "GlobalMemoryStatusEx + GetSystemTimes";
+    diag.docker_socket = "\\\\.\\pipe\\docker_engine";
+    diag.uptime_seconds = GetTickCount64() / 1000;
+
+    PROCESS_MEMORY_COUNTERS pmc;
+    if (GetProcessMemoryInfo(GetCurrentProcess(), &pmc, sizeof(pmc))) {
+        diag.memory_rss_mb = static_cast<double>(pmc.WorkingSetSize) / (1024.0 * 1024.0);
+    }
+#else
+    diag.os_platform = "Linux (POSIX Kernel)";
+    diag.architecture = "x86_64";
+    diag.logical_cores = sysconf(_SC_NPROCESSORS_ONLN);
+    diag.compiler = "GCC / Clang C++20";
+    diag.metrics_source = "/proc/stat + sysinfo";
+    diag.docker_socket = "/var/run/docker.sock";
+
+    struct sysinfo s_info;
+    if (sysinfo(&s_info) == 0) {
+        diag.uptime_seconds = s_info.uptime;
+    }
+
+    std::ifstream statm("/proc/self/statm");
+    if (statm.is_open()) {
+        unsigned long size, resident;
+        if (statm >> size >> resident) {
+            diag.memory_rss_mb = (resident * sysconf(_SC_PAGESIZE)) / (1024.0 * 1024.0);
+        }
+    }
+#endif
+    diag.docker_available = dockerAvailable;
+    diag.docker_mode = dockerAvailable ? "Hermetic Docker Container (UID 1000, unprivileged)" : "Restricted POSIX Subprocess";
+    diag.active_ast_rules = 18;
+    diag.storage_engine = "SQLite3 WAL";
+    return diag;
+}
+
 } // namespace commandforge

@@ -25,6 +25,8 @@ import {
   FileCode,
   CornerDownLeft,
   History,
+  Volume2,
+  VolumeX,
 } from 'lucide-react';
 import { GeneratedCommand, ExecutionResult, RiskLevel } from '../types/api';
 import { ApiService } from '../services/api';
@@ -62,8 +64,41 @@ export const CommandAssistantPage: React.FC = () => {
     }
   });
   const [showHistoryDropdown, setShowHistoryDropdown] = useState(false);
+  const [isSpeaking, setIsSpeaking] = useState(false);
 
   const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const toggleSpeech = () => {
+    if (!('speechSynthesis' in window)) return;
+    if (isSpeaking) {
+      window.speechSynthesis.cancel();
+      setIsSpeaking(false);
+      return;
+    }
+    if (!generated?.explanation) return;
+    window.speechSynthesis.cancel();
+    const utterance = new SpeechSynthesisUtterance(generated.explanation);
+    utterance.rate = 1.0;
+    utterance.onend = () => setIsSpeaking(false);
+    utterance.onerror = () => setIsSpeaking(false);
+    setIsSpeaking(true);
+    window.speechSynthesis.speak(utterance);
+  };
+
+  useEffect(() => {
+    const pendingPrompt = sessionStorage.getItem('cf_active_prompt');
+    if (pendingPrompt) {
+      setPrompt(pendingPrompt);
+      sessionStorage.removeItem('cf_active_prompt');
+      handleGenerate(pendingPrompt);
+    }
+
+    return () => {
+      if ('speechSynthesis' in window) {
+        window.speechSynthesis.cancel();
+      }
+    };
+  }, []);
 
   useEffect(() => {
     ApiService.getHealth()
@@ -578,7 +613,26 @@ export const CommandAssistantPage: React.FC = () => {
                   <HelpCircle className="h-4 w-4 text-indigo-400" />
                   <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-200">Security Assessment</h3>
                 </div>
-                <span className="label-micro text-indigo-300">Deterministic</span>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={toggleSpeech}
+                    className={`flex items-center gap-1 rounded-md px-2 py-0.5 text-[10px] font-mono border transition-all ${
+                      isSpeaking
+                        ? 'border-indigo-500 bg-indigo-950/40 text-indigo-300'
+                        : 'border-white/[0.08] text-slate-400 hover:text-slate-200 hover:bg-slate-900'
+                    }`}
+                    title={isSpeaking ? 'Stop speaking explanation' : 'Listen to plain-English explanation'}
+                  >
+                    {isSpeaking ? (
+                      <VolumeX className="h-3 w-3 text-indigo-400 animate-pulse" />
+                    ) : (
+                      <Volume2 className="h-3 w-3" />
+                    )}
+                    <span>{isSpeaking ? 'Stop' : 'Listen'}</span>
+                  </button>
+                  <span className="label-micro text-indigo-300">Deterministic</span>
+                </div>
               </div>
 
               {/* Plain-English Breakdown */}
