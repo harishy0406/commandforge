@@ -41,3 +41,33 @@ TEST(StorageTest, InitializesAndPerformsCrud) {
 
     std::remove(testDb.c_str());
 }
+
+TEST(StorageTest, PurgesHistoricalRecords) {
+    std::string testDb = "test_purge.db";
+    std::remove(testDb.c_str());
+
+    {
+        SqliteRepository repo(testDb);
+        ASSERT_TRUE(repo.initialize());
+
+        CommandRecord rec;
+        rec.id = "purge-target-1";
+        rec.command = "ls -la";
+        rec.created_at = "2020-01-01 00:00:00";
+        EXPECT_TRUE(repo.saveExecution(rec));
+
+        // Purge records older than 30 days
+        int purged = repo.purgeHistory(30);
+        EXPECT_GE(purged, 1);
+
+        // All historical records should be cleared on total purge
+        int totalPurged = repo.purgeHistory(0);
+        EXPECT_GE(totalPurged, 0);
+
+        int totalRemaining = 0;
+        auto list = repo.getHistory(1, 10, "all", "", totalRemaining);
+        EXPECT_EQ(totalRemaining, 0);
+    }
+
+    std::remove(testDb.c_str());
+}

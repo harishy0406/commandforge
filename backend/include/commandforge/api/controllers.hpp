@@ -30,6 +30,7 @@ public:
     nlohmann::json handleGetHistory(int page, int limit, const std::string& status, const std::string& search);
     nlohmann::json handleGetHistoryById(const std::string& id);
     nlohmann::json handleCancelExecution(const std::string& id);
+    nlohmann::json handlePurgeHistory(int older_than_days = 0);
     nlohmann::json handleGetSystemMetrics();
     nlohmann::json handleGetSettings();
     nlohmann::json handleUpdateSettings(const nlohmann::json& requestBody);

@@ -115,6 +115,27 @@ void HttpServer::setupRoutes() {
         sendJson(res, controller_->handleCancelExecution(id));
     });
 
+    // DELETE /api/commands/history
+    server_.Delete("/api/commands/history", [this](const httplib::Request& req, httplib::Response& res) {
+        int olderThan = req.has_param("older_than_days") ? std::stoi(req.get_param_value("older_than_days")) : 0;
+        sendJson(res, controller_->handlePurgeHistory(olderThan));
+    });
+
+    // POST /api/commands/history/purge
+    server_.Post("/api/commands/history/purge", [this](const httplib::Request& req, httplib::Response& res) {
+        int olderThan = 0;
+        if (!req.body.empty()) {
+            try {
+                auto body = nlohmann::json::parse(req.body);
+                olderThan = body.value("older_than_days", 0);
+            } catch (...) {}
+        }
+        if (req.has_param("older_than_days")) {
+            olderThan = std::stoi(req.get_param_value("older_than_days"));
+        }
+        sendJson(res, controller_->handlePurgeHistory(olderThan));
+    });
+
     // GET /api/system/metrics
     server_.Get("/api/system/metrics", [this](const httplib::Request&, httplib::Response& res) {
         auto response = controller_->handleGetSystemMetrics();

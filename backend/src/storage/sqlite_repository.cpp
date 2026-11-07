@@ -356,4 +356,28 @@ DashboardSummary SqliteRepository::getSummary() {
     return summary;
 }
 
+int SqliteRepository::purgeHistory(int older_than_days) {
+    std::lock_guard<std::recursive_mutex> lock(mutex_);
+    if (!db_) return 0;
+
+    std::string sql;
+    if (older_than_days <= 0) {
+        sql = "DELETE FROM executions;";
+    } else {
+        sql = "DELETE FROM executions WHERE created_at < datetime('now', '-" + std::to_string(older_than_days) + " days');";
+    }
+
+    char* err = nullptr;
+    int rc = sqlite3_exec(db_, sql.c_str(), nullptr, nullptr, &err);
+    if (rc != SQLITE_OK) {
+        std::string errStr = err ? err : "unknown error";
+        sqlite3_free(err);
+        LOG_ERROR("SqliteRepository", "Failed to purge history: " + errStr);
+        return 0;
+    }
+    int changes = sqlite3_changes(db_);
+    LOG_INFO("SqliteRepository", "Purged " + std::to_string(changes) + " records from history (older_than_days: " + std::to_string(older_than_days) + ")");
+    return changes;
+}
+
 } // namespace commandforge
