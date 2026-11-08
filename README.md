@@ -199,6 +199,29 @@ Navigate to `http://localhost:3000`. Requests to `/api` are automatically proxie
 
 ---
 
+## REST API Specification
+
+The C++ backend exposes a typed REST API adhering to OpenAPI 3.0 conventions:
+
+| Method | Endpoint | Description |
+|---|---|---|
+| `GET` | `/api/health` | Service health status, uptime, and engine capabilities |
+| `GET` | `/api/dashboard/summary` | Aggregate command metrics, success rates, and live activity |
+| `GET` | `/api/ai/providers` | Active AI provider configuration and recommended free models |
+| `POST` | `/api/commands/generate` | Synthesize shell command from natural language prompt |
+| `POST` | `/api/commands/validate` | AST static analysis and security policy risk evaluation |
+| `POST` | `/api/commands/execute` | Run approved command inside isolated Docker container |
+| `GET` | `/api/commands/history` | Query persistent SQLite audit ledger with pagination & search |
+| `POST` | `/api/commands/history/purge` | Purge audit records by retention window (`older_than_days`) |
+| `GET` | `/api/commands/history/:id` | Retrieve detailed execution forensic record by UUID |
+| `POST` | `/api/commands/execute/:id/cancel` | Terminate running container sandbox process |
+| `GET` | `/api/system/metrics` | Real-time CPU, RAM, and disk utilization telemetry |
+| `GET` | `/api/system/diagnostics` | Host platform, Docker socket probe, and AST engine status |
+| `GET` | `/api/settings` | Public server settings (without sensitive secrets) |
+| `PUT` | `/api/settings` | Update timeouts, quotas, and AI provider routing |
+
+---
+
 ## Configuration Variables
 
 Configure via environment variables or `.env`:
