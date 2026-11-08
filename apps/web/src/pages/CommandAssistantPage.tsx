@@ -355,6 +355,10 @@ export const CommandAssistantPage: React.FC = () => {
                     }}
                   />
                 </div>
+                <div className="flex items-center justify-between pt-1.5 border-t border-white/[0.04] mt-1.5 text-[10px] font-mono text-slate-500 select-none">
+                  <span>Press ⌘+Enter / Ctrl+Enter to synthesize</span>
+                  <span>{prompt.length} chars • ~{Math.max(1, Math.ceil(prompt.length / 4))} tokens</span>
+                </div>
               </div>
             </div>
 

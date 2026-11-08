@@ -36,10 +36,15 @@ static std::string isoTimestamp() {
 }
 
 nlohmann::json ApiController::handleHealth() {
+    uint64_t uptimeSec = 0;
+    if (system_monitor_) {
+        uptimeSec = system_monitor_->getDiagnostics(false).uptime_seconds;
+    }
     return {
         {"status", "healthy"},
         {"timestamp", isoTimestamp()},
         {"version", "1.0.0"},
+        {"uptime_seconds", uptimeSec},
         {"execution_adapter", config_.execution_adapter},
         {"docker_available", execution_engine_ ? execution_engine_->isDockerAvailable() : false},
         {"ai_provider", config_.ai_provider},

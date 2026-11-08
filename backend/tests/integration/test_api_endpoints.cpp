@@ -35,6 +35,7 @@ TEST(ApiIntegrationTest, FullControllerWorkflow) {
         // 1. Health
         auto health = controller.handleHealth();
         EXPECT_EQ(health["status"], "healthy");
+        EXPECT_TRUE(health.contains("uptime_seconds"));
 
         // 2. Generate
         nlohmann::json genReq = {{"prompt", "Find the largest files in directory"}};
