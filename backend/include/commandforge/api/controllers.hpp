@@ -26,6 +26,7 @@ public:
     nlohmann::json handleDashboardSummary();
     nlohmann::json handleGenerateCommand(const nlohmann::json& requestBody);
     nlohmann::json handleValidateCommand(const nlohmann::json& requestBody);
+    nlohmann::json handleValidateBatchCommand(const nlohmann::json& requestBody);
     nlohmann::json handleExecuteCommand(const nlohmann::json& requestBody);
     nlohmann::json handleGetHistory(int page, int limit, const std::string& status, const std::string& search);
     nlohmann::json handleGetHistoryById(const std::string& id);

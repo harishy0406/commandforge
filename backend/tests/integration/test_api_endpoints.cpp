@@ -48,6 +48,16 @@ TEST(ApiIntegrationTest, FullControllerWorkflow) {
         auto valRes = controller.handleValidateCommand(valReq);
         EXPECT_TRUE(valRes["is_valid"].get<bool>());
 
+        // 3b. Batch Validate
+        nlohmann::json batchReq = {{"commands", nlohmann::json::array({"df -h", "rm -rf /", "uptime"})}};
+        auto batchRes = controller.handleValidateBatchCommand(batchReq);
+        EXPECT_TRUE(batchRes.contains("summary"));
+        EXPECT_EQ(batchRes["summary"]["total"], 3);
+        EXPECT_EQ(batchRes["summary"]["allowed"], 2);
+        EXPECT_EQ(batchRes["summary"]["blocked"], 1);
+        EXPECT_EQ(batchRes["summary"]["highest_risk"], "high");
+        EXPECT_FALSE(batchRes["summary"]["all_allowed"].get<bool>());
+
         // 4. Summary
         auto summary = controller.handleDashboardSummary();
         EXPECT_TRUE(summary.contains("total_executed"));

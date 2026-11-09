@@ -121,6 +121,48 @@ nlohmann::json ApiController::handleValidateCommand(const nlohmann::json& reques
     return val.toJson();
 }
 
+nlohmann::json ApiController::handleValidateBatchCommand(const nlohmann::json& requestBody) {
+    if (!requestBody.contains("commands") || !requestBody["commands"].is_array()) {
+        return {{"error", "Field 'commands' is required and must be an array of strings."}};
+    }
+
+    nlohmann::json results = nlohmann::json::array();
+    int allowedCount = 0;
+    int blockedCount = 0;
+    RiskLevel highestRisk = RiskLevel::Low;
+
+    for (const auto& item : requestBody["commands"]) {
+        if (!item.is_string()) continue;
+        std::string cmd = item.get<std::string>();
+        ValidationResult val = risk_analyzer_->validate(cmd);
+        if (val.is_allowed) {
+            allowedCount++;
+        } else {
+            blockedCount++;
+        }
+        if (val.risk_level == RiskLevel::High) {
+            highestRisk = RiskLevel::High;
+        } else if (val.risk_level == RiskLevel::Medium && highestRisk == RiskLevel::Low) {
+            highestRisk = RiskLevel::Medium;
+        }
+
+        nlohmann::json itemJson = val.toJson();
+        itemJson["command"] = cmd;
+        results.push_back(itemJson);
+    }
+
+    return {
+        {"results", results},
+        {"summary", {
+            {"total", results.size()},
+            {"allowed", allowedCount},
+            {"blocked", blockedCount},
+            {"highest_risk", riskLevelToString(highestRisk)},
+            {"all_allowed", blockedCount == 0}
+        }}
+    };
+}
+
 nlohmann::json ApiController::handleExecuteCommand(const nlohmann::json& requestBody) {
     if (!requestBody.contains("command") || !requestBody["command"].is_string()) {
         return {{"error", "Field 'command' is required and must be a string."}};

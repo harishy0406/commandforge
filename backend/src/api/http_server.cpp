@@ -80,6 +80,18 @@ void HttpServer::setupRoutes() {
         }
     });
 
+    // POST /api/commands/validate/batch
+    server_.Post("/api/commands/validate/batch", [this](const httplib::Request& req, httplib::Response& res) {
+        try {
+            auto body = nlohmann::json::parse(req.body);
+            auto response = controller_->handleValidateBatchCommand(body);
+            int status = response.contains("error") ? 400 : 200;
+            sendJson(res, response, status);
+        } catch (const std::exception& e) {
+            sendJson(res, {{"error", std::string("Invalid JSON: ") + e.what()}}, 400);
+        }
+    });
+
     // POST /api/commands/execute
     server_.Post("/api/commands/execute", [this](const httplib::Request& req, httplib::Response& res) {
         try {
