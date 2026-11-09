@@ -62,6 +62,16 @@ TEST(ApiIntegrationTest, FullControllerWorkflow) {
         auto summary = controller.handleDashboardSummary();
         EXPECT_TRUE(summary.contains("total_executed"));
 
+        // 4b. History Export (CSV & JSON)
+        std::string csvExport = controller.handleExportHistory("csv");
+        EXPECT_FALSE(csvExport.empty());
+        EXPECT_NE(csvExport.find("id,created_at,risk_level"), std::string::npos);
+
+        std::string jsonExport = controller.handleExportHistory("json");
+        EXPECT_FALSE(jsonExport.empty());
+        auto parsedExport = nlohmann::json::parse(jsonExport);
+        EXPECT_TRUE(parsedExport.is_array());
+
         // 5. Settings
         auto settings = controller.handleGetSettings();
         EXPECT_EQ(settings["ai_provider"], "mock");

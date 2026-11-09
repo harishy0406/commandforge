@@ -213,6 +213,52 @@ nlohmann::json ApiController::handleGetHistoryById(const std::string& id) {
     return {{"error", "Record not found with ID: " + id}};
 }
 
+static std::string escapeCsvField(const std::string& field) {
+    std::string escaped = "\"";
+    for (char c : field) {
+        if (c == '"') {
+            escaped += "\"\"";
+        } else if (c == '\r' || c == '\n') {
+            escaped += ' ';
+        } else {
+            escaped += c;
+        }
+    }
+    escaped += "\"";
+    return escaped;
+}
+
+std::string ApiController::handleExportHistory(const std::string& format) {
+    std::vector<CommandRecord> records;
+    if (repository_) {
+        int total = 0;
+        records = repository_->getHistory(1, 100000, "", "", total);
+    }
+
+    if (format == "json") {
+        nlohmann::json arr = nlohmann::json::array();
+        for (const auto& r : records) {
+            arr.push_back(r.toJson());
+        }
+        return arr.dump(2);
+    }
+
+    std::ostringstream ss;
+    ss << "id,created_at,risk_level,status,exit_code,duration_ms,command,prompt,explanation\n";
+    for (const auto& r : records) {
+        ss << escapeCsvField(r.id) << ","
+           << escapeCsvField(r.created_at) << ","
+           << escapeCsvField(r.risk_level) << ","
+           << escapeCsvField(r.status) << ","
+           << r.exit_code << ","
+           << r.duration_ms << ","
+           << escapeCsvField(r.command) << ","
+           << escapeCsvField(r.prompt) << ","
+           << escapeCsvField(r.explanation) << "\n";
+    }
+    return ss.str();
+}
+
 nlohmann::json ApiController::handleCancelExecution(const std::string& id) {
     bool cancelled = execution_engine_->cancelExecution(id);
     return {

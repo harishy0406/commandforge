@@ -113,6 +113,18 @@ void HttpServer::setupRoutes() {
         sendJson(res, controller_->handleGetHistory(page, limit, status, search));
     });
 
+    // GET /api/commands/history/export
+    server_.Get("/api/commands/history/export", [this](const httplib::Request& req, httplib::Response& res) {
+        std::string format = req.has_param("format") ? req.get_param_value("format") : "csv";
+        if (format == "json") {
+            res.set_content(controller_->handleExportHistory("json"), "application/json");
+        } else {
+            res.set_header("Content-Disposition", "attachment; filename=\"commandforge-audit-log.csv\"");
+            res.set_content(controller_->handleExportHistory("csv"), "text/csv");
+        }
+        res.status = 200;
+    });
+
     // GET /api/commands/history/:id
     server_.Get(R"(/api/commands/history/([a-zA-Z0-9\-]+))", [this](const httplib::Request& req, httplib::Response& res) {
         std::string id = req.matches[1];
