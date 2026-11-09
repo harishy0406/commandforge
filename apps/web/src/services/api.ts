@@ -10,6 +10,7 @@ import {
   SystemMetrics,
   SystemDiagnostics,
   ValidationResult,
+  BatchValidationResponse,
   AIProvidersResponse
 } from '../types/api';
 
@@ -54,6 +55,16 @@ export class ApiService {
       body: JSON.stringify({ command }),
     });
     if (!res.ok) throw new Error(`Validation failed: ${res.statusText}`);
+    return res.json();
+  }
+
+  static async validateBatchCommands(commands: string[]): Promise<BatchValidationResponse> {
+    const res = await fetch(`${API_BASE}/commands/validate/batch`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ commands }),
+    });
+    if (!res.ok) throw new Error(`Batch validation failed: ${res.statusText}`);
     return res.json();
   }
 

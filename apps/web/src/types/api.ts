@@ -21,6 +21,24 @@ export interface ValidationResult {
   is_allowed: boolean;
 }
 
+export interface BatchValidationItem {
+  command: string;
+  is_valid: boolean;
+  risk_level: RiskLevel;
+  warnings: string[];
+  blocked_reasons: string[];
+  is_allowed: boolean;
+}
+
+export interface BatchValidationResponse {
+  total: number;
+  allowed: number;
+  blocked: number;
+  highest_risk: RiskLevel;
+  all_allowed: boolean;
+  results: BatchValidationItem[];
+}
+
 export interface ExecutionRequest {
   id?: string;
   command: string;

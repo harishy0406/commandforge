@@ -27,8 +27,9 @@ import {
   History,
   Volume2,
   VolumeX,
+  Workflow,
 } from 'lucide-react';
-import { GeneratedCommand, ExecutionResult, RiskLevel } from '../types/api';
+import { GeneratedCommand, ExecutionResult, RiskLevel, BatchValidationResponse } from '../types/api';
 import { ApiService } from '../services/api';
 
 export const CommandAssistantPage: React.FC = () => {
@@ -65,8 +66,32 @@ export const CommandAssistantPage: React.FC = () => {
   });
   const [showHistoryDropdown, setShowHistoryDropdown] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
+  const [pipelineAnalysis, setPipelineAnalysis] = useState<BatchValidationResponse | null>(null);
+  const [isAnalyzingPipeline, setIsAnalyzingPipeline] = useState(false);
 
   const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const splitPipelineCommands = (cmd: string): string[] => {
+    if (!cmd) return [];
+    const segments = cmd.split(/(&&|\|\||;|\|)/);
+    const parts: string[] = [];
+    let current = '';
+    for (let i = 0; i < segments.length; i++) {
+      const token = segments[i].trim();
+      if (token === '&&' || token === '||' || token === ';' || token === '|') {
+        if (current.trim()) {
+          parts.push(current.trim());
+          current = '';
+        }
+      } else {
+        current += (current ? ' ' : '') + segments[i];
+      }
+    }
+    if (current.trim()) {
+      parts.push(current.trim());
+    }
+    return parts.filter((p) => p.length > 0);
+  };
 
   const toggleSpeech = () => {
     if (!('speechSynthesis' in window)) return;
@@ -146,6 +171,15 @@ export const CommandAssistantPage: React.FC = () => {
             potentially_destructive: blocked || val.risk_level === 'high' || val.warnings.length > 0,
           };
         });
+
+        const stages = splitPipelineCommands(editedCommand);
+        if (stages.length > 1) {
+          ApiService.validateBatchCommands(stages)
+            .then((analysis) => setPipelineAnalysis(analysis))
+            .catch(() => setPipelineAnalysis(null));
+        } else {
+          setPipelineAnalysis(null);
+        }
       } catch {
         // Ignore live validation errors
       }
@@ -174,6 +208,17 @@ export const CommandAssistantPage: React.FC = () => {
       setIsEditing(false);
       if (res.provider) setActiveProvider(res.provider);
       if (res.model) setActiveModel(res.model);
+
+      const stages = splitPipelineCommands(res.command);
+      if (stages.length > 1) {
+        setIsAnalyzingPipeline(true);
+        ApiService.validateBatchCommands(stages)
+          .then((analysis) => setPipelineAnalysis(analysis))
+          .catch(() => setPipelineAnalysis(null))
+          .finally(() => setIsAnalyzingPipeline(false));
+      } else {
+        setPipelineAnalysis(null);
+      }
 
       setPromptHistory((prev) => {
         const next = [q, ...prev.filter((p) => p !== q)].slice(0, 10);
@@ -217,6 +262,7 @@ export const CommandAssistantPage: React.FC = () => {
     setError(null);
     setHighRiskConfirmed(false);
     setActiveExecutionId(null);
+    setPipelineAnalysis(null);
   };
 
   const handleCancelExecution = async () => {
@@ -574,6 +620,71 @@ export const CommandAssistantPage: React.FC = () => {
                 </div>
               )}
             </div>
+
+            {/* Pipeline Multi-Command Decomposition */}
+            {isAnalyzingPipeline && (
+              <div className="flex items-center gap-2 rounded-xl border border-white/[0.06] bg-slate-950/60 p-3 text-xs text-slate-400 font-mono animate-pulse">
+                <Workflow className="h-4 w-4 text-cyan-400 animate-spin" />
+                <span>Decomposing compound pipeline stages and querying AST pre-flight policy...</span>
+              </div>
+            )}
+
+            {pipelineAnalysis && pipelineAnalysis.results.length > 1 && (
+              <div className="rounded-xl border border-white/[0.08] bg-slate-950/80 p-4 space-y-3">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2.5 border-b border-white/[0.06]">
+                  <div className="flex items-center gap-2">
+                    <Workflow className="h-4 w-4 text-cyan-400 shrink-0" />
+                    <span className="text-xs font-semibold text-slate-200 uppercase tracking-wider">
+                      Pipeline Pre-Flight Decomposition
+                    </span>
+                    <span className="rounded bg-cyan-500/10 px-2 py-0.5 text-[10px] font-mono text-cyan-400 border border-cyan-500/20">
+                      {pipelineAnalysis.total} Sub-Stages
+                    </span>
+                  </div>
+                  <span
+                    className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[10px] font-mono font-bold ${
+                      pipelineAnalysis.all_allowed
+                        ? 'bg-emerald-500/10 text-emerald-300 border border-emerald-500/30'
+                        : 'bg-rose-500/10 text-rose-300 border border-rose-500/30'
+                    }`}
+                  >
+                    ● {pipelineAnalysis.all_allowed ? 'All Stages Safe' : `${pipelineAnalysis.blocked} Blocked Stage(s)`}
+                  </span>
+                </div>
+
+                <div className="space-y-2">
+                  {pipelineAnalysis.results.map((item, idx) => (
+                    <div
+                      key={idx}
+                      className={`flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-2.5 rounded-lg border text-xs font-mono transition-colors ${
+                        item.is_allowed
+                          ? 'bg-slate-900/60 border-white/[0.04]'
+                          : 'bg-rose-950/30 border-rose-500/30'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2 min-w-0">
+                        <span className="shrink-0 rounded bg-slate-800 px-1.5 py-0.5 text-[10px] text-slate-400 font-bold">
+                          Step {idx + 1}
+                        </span>
+                        <span className="truncate text-slate-200 font-semibold">{item.command}</span>
+                      </div>
+                      <div className="flex items-center gap-2 shrink-0">
+                        {getRiskBadge(item.risk_level)}
+                        <span
+                          className={`rounded px-1.5 py-0.5 text-[10px] font-bold ${
+                            item.is_allowed
+                              ? 'bg-emerald-500/15 text-emerald-400'
+                              : 'bg-rose-500/15 text-rose-400'
+                          }`}
+                        >
+                          {item.is_allowed ? 'ALLOWED' : 'BLOCKED'}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {/* Execution Dock */}
             <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-3 border-t border-white/[0.06]">
