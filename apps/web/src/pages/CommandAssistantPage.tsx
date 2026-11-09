@@ -28,9 +28,104 @@ import {
   Volume2,
   VolumeX,
   Workflow,
+  BookOpen,
+  ChevronDown,
+  ChevronUp,
 } from 'lucide-react';
 import { GeneratedCommand, ExecutionResult, RiskLevel, BatchValidationResponse } from '../types/api';
 import { ApiService } from '../services/api';
+
+interface PlaybookItem {
+  id: string;
+  category: 'health' | 'storage' | 'network' | 'docker' | 'security';
+  title: string;
+  query: string;
+  commandSnippet: string;
+  risk: 'low' | 'medium';
+}
+
+const PLAYBOOKS: PlaybookItem[] = [
+  {
+    id: 'pb-1',
+    category: 'health',
+    title: 'Top 10 Memory Procs',
+    query: 'Inspect memory usage and list top 10 memory consuming processes with RSS and CPU time',
+    commandSnippet: 'ps aux --sort=-%mem | awk "NR<=11 {print $1,$2,$3,$4,$11}"',
+    risk: 'low',
+  },
+  {
+    id: 'pb-2',
+    category: 'health',
+    title: 'CPU Load & IO-Wait',
+    query: 'Display current CPU utilization, load averages, and IO wait percentage',
+    commandSnippet: 'vmstat 1 5 && uptime',
+    risk: 'low',
+  },
+  {
+    id: 'pb-3',
+    category: 'storage',
+    title: 'Find Files > 100MB',
+    query: 'Find the top 10 largest files greater than 100MB in current tree',
+    commandSnippet: 'find . -type f -size +100M -exec ls -lh {} + 2>/dev/null | sort -k 5 -hr | head -n 10',
+    risk: 'low',
+  },
+  {
+    id: 'pb-4',
+    category: 'storage',
+    title: 'Inode Saturation Check',
+    query: 'Display filesystem inode usage and identify any partition nearing exhaustion',
+    commandSnippet: 'df -h -i',
+    risk: 'low',
+  },
+  {
+    id: 'pb-5',
+    category: 'network',
+    title: 'Listening TCP/UDP Ports',
+    query: 'Show all listening network sockets and their owning processes',
+    commandSnippet: 'ss -tulpn',
+    risk: 'low',
+  },
+  {
+    id: 'pb-6',
+    category: 'network',
+    title: 'Active Socket Conns',
+    query: 'Count established network connections grouped by foreign IP address',
+    commandSnippet: 'ss -tan state established | awk "{print $4}" | cut -d: -f1 | sort | uniq -c | sort -nr | head -n 15',
+    risk: 'low',
+  },
+  {
+    id: 'pb-7',
+    category: 'docker',
+    title: 'Container Live Stats',
+    query: 'Display live CPU, Memory, and Network I/O metrics for all running containers',
+    commandSnippet: 'docker stats --no-stream --format "table {{.Name}}\t{{.CPUPerc}}\t{{.MemUsage}}\t{{.NetIO}}"',
+    risk: 'low',
+  },
+  {
+    id: 'pb-8',
+    category: 'docker',
+    title: 'Prune Dangling Images',
+    query: 'Remove dangling container images and expired builder cache',
+    commandSnippet: 'docker image prune -f',
+    risk: 'medium',
+  },
+  {
+    id: 'pb-9',
+    category: 'security',
+    title: 'Failed Auth Logins',
+    query: 'Inspect system authentication log for failed login attempts in the past 24 hours',
+    commandSnippet: 'grep "Failed password" /var/log/auth.log 2>/dev/null | tail -n 25 || journalctl -u ssh -n 25',
+    risk: 'low',
+  },
+  {
+    id: 'pb-10',
+    category: 'security',
+    title: 'World-Writable Audit',
+    query: 'Find world-writable files excluding system mountpoints',
+    commandSnippet: 'find /var /tmp -type f -perm -0002 2>/dev/null | head -n 20',
+    risk: 'low',
+  },
+];
 
 export const CommandAssistantPage: React.FC = () => {
   const [prompt, setPrompt] = useState('');
@@ -49,6 +144,10 @@ export const CommandAssistantPage: React.FC = () => {
   const [showHighRiskModal, setShowHighRiskModal] = useState(false);
   const [highRiskConfirmed, setHighRiskConfirmed] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Playbooks drawer
+  const [showPlaybooksDrawer, setShowPlaybooksDrawer] = useState(false);
+  const [playbookCategory, setPlaybookCategory] = useState<'all' | 'health' | 'storage' | 'network' | 'docker' | 'security'>('all');
 
   // Active AI Engine Info
   const [activeProvider, setActiveProvider] = useState<string>('');
@@ -364,8 +463,23 @@ export const CommandAssistantPage: React.FC = () => {
                 </div>
               </div>
 
-              {/* Active Provider Tag */}
+              {/* Active Provider Tag & Playbook Toggle */}
               <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setShowPlaybooksDrawer(!showPlaybooksDrawer)}
+                  className={`inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs font-mono font-medium transition-all ${
+                    showPlaybooksDrawer
+                      ? 'border-indigo-500 bg-indigo-950/60 text-indigo-300 border shadow-sm'
+                      : 'border-white/[0.08] bg-slate-950/80 text-slate-400 hover:text-white border'
+                  }`}
+                  title="Toggle curated Linux DevOps command playbooks"
+                >
+                  <BookOpen className="h-3.5 w-3.5 text-indigo-400" />
+                  <span>Playbooks</span>
+                  {showPlaybooksDrawer ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+                </button>
+
                 <div className="flex items-center gap-1.5 rounded-full bg-slate-950/80 px-3 py-1 border border-white/[0.08] text-xs">
                   <span className="h-1.5 w-1.5 rounded-full bg-indigo-400 shadow-[0_0_6px_rgba(129,140,248,0.8)]" />
                   <span className="label-micro text-indigo-300 uppercase">{activeProvider || 'Mock'}</span>
@@ -382,6 +496,100 @@ export const CommandAssistantPage: React.FC = () => {
                 )}
               </div>
             </div>
+
+            {/* Curated Linux Playbooks Drawer */}
+            {showPlaybooksDrawer && (
+              <div className="mt-4 rounded-xl border border-indigo-500/30 bg-slate-950/90 p-4 space-y-3 animate-in fade-in zoom-in-95 shadow-2xl">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2.5 border-b border-white/[0.06]">
+                  <div className="flex items-center gap-2">
+                    <BookOpen className="h-4 w-4 text-indigo-400" />
+                    <span className="text-xs font-semibold text-slate-200">Curated Linux & DevOps Playbooks</span>
+                    <span className="rounded bg-indigo-500/10 px-2 py-0.5 text-[10px] font-mono text-indigo-400 border border-indigo-500/20">
+                      10 Recipes
+                    </span>
+                  </div>
+
+                  {/* Category Filter Pills */}
+                  <div className="flex flex-wrap items-center gap-1">
+                    {(['all', 'health', 'storage', 'network', 'docker', 'security'] as const).map((cat) => (
+                      <button
+                        key={cat}
+                        type="button"
+                        onClick={() => setPlaybookCategory(cat)}
+                        className={`rounded px-2 py-0.5 text-[10px] font-mono capitalize transition-all ${
+                          playbookCategory === cat
+                            ? 'bg-indigo-600 text-white font-bold'
+                            : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900'
+                        }`}
+                      >
+                        {cat}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Playbook Items Grid */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5 max-h-64 overflow-y-auto pr-1">
+                  {PLAYBOOKS.filter((pb) => playbookCategory === 'all' || pb.category === playbookCategory).map((pb) => (
+                    <div
+                      key={pb.id}
+                      className="group flex flex-col justify-between rounded-lg border border-white/[0.06] bg-slate-900/60 p-2.5 hover:border-indigo-500/40 hover:bg-slate-900 transition-all space-y-2"
+                    >
+                      <div className="space-y-1">
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-semibold text-slate-200 group-hover:text-indigo-300 transition-colors">
+                            {pb.title}
+                          </span>
+                          <span className="rounded bg-slate-800 px-1.5 py-0.5 text-[9px] font-mono text-slate-400 uppercase">
+                            {pb.category}
+                          </span>
+                        </div>
+                        <p className="text-[11px] text-slate-400 line-clamp-2 leading-relaxed">
+                          {pb.query}
+                        </p>
+                        <div className="rounded bg-slate-950 p-1.5 font-mono text-[10px] text-emerald-400/90 truncate border border-white/[0.04]">
+                          $ {pb.commandSnippet}
+                        </div>
+                      </div>
+
+                      <div className="flex items-center justify-end gap-1.5 pt-1 border-t border-white/[0.04]">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setPrompt(pb.query);
+                            handleGenerate(pb.query);
+                          }}
+                          className="rounded px-2 py-1 text-[10px] font-mono font-medium text-indigo-400 hover:bg-indigo-950/40 hover:text-indigo-300 transition-colors"
+                          title="Generate command using this recipe's prompt"
+                        >
+                          Synthesize
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setEditedCommand(pb.commandSnippet);
+                            setIsEditing(false);
+                            setGenerated({
+                              command: pb.commandSnippet,
+                              explanation: pb.query,
+                              risk_level: pb.risk,
+                              risk_reason: 'Curated canonical Linux playbook snippet.',
+                              potentially_destructive: pb.risk === 'medium',
+                              requires_confirmation: false,
+                              suggested_alternatives: [],
+                            });
+                          }}
+                          className="rounded bg-slate-800 px-2 py-1 text-[10px] font-mono font-medium text-slate-200 hover:bg-indigo-600 hover:text-white transition-colors"
+                          title="Load directly into Audited Command Spec"
+                        >
+                          Direct Load →
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {/* Input Form */}
             <div className="mt-4 relative">
