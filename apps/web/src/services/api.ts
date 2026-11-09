@@ -142,4 +142,22 @@ export class ApiService {
     if (!res.ok) throw new Error(`Failed to purge history: ${res.statusText}`);
     return res.json();
   }
+
+  static getExportUrl(format: 'csv' | 'json' = 'csv'): string {
+    return `${API_BASE}/commands/history/export?format=${format}`;
+  }
+
+  static async downloadAuditLog(format: 'csv' | 'json' = 'csv'): Promise<void> {
+    const res = await fetch(this.getExportUrl(format));
+    if (!res.ok) throw new Error('Failed to export audit log from server');
+    const blob = await res.blob();
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `commandforge-audit-log-${new Date().toISOString().slice(0, 10)}.${format}`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    window.URL.revokeObjectURL(url);
+  }
 }
