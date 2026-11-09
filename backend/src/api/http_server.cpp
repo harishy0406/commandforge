@@ -80,6 +80,18 @@ void HttpServer::setupRoutes() {
         }
     });
 
+    // POST /api/commands/validate/batch
+    server_.Post("/api/commands/validate/batch", [this](const httplib::Request& req, httplib::Response& res) {
+        try {
+            auto body = nlohmann::json::parse(req.body);
+            auto response = controller_->handleValidateBatchCommand(body);
+            int status = response.contains("error") ? 400 : 200;
+            sendJson(res, response, status);
+        } catch (const std::exception& e) {
+            sendJson(res, {{"error", std::string("Invalid JSON: ") + e.what()}}, 400);
+        }
+    });
+
     // POST /api/commands/execute
     server_.Post("/api/commands/execute", [this](const httplib::Request& req, httplib::Response& res) {
         try {
@@ -99,6 +111,18 @@ void HttpServer::setupRoutes() {
         std::string status = req.has_param("status") ? req.get_param_value("status") : "";
         std::string search = req.has_param("search") ? req.get_param_value("search") : "";
         sendJson(res, controller_->handleGetHistory(page, limit, status, search));
+    });
+
+    // GET /api/commands/history/export
+    server_.Get("/api/commands/history/export", [this](const httplib::Request& req, httplib::Response& res) {
+        std::string format = req.has_param("format") ? req.get_param_value("format") : "csv";
+        if (format == "json") {
+            res.set_content(controller_->handleExportHistory("json"), "application/json");
+        } else {
+            res.set_header("Content-Disposition", "attachment; filename=\"commandforge-audit-log.csv\"");
+            res.set_content(controller_->handleExportHistory("csv"), "text/csv");
+        }
+        res.status = 200;
     });
 
     // GET /api/commands/history/:id

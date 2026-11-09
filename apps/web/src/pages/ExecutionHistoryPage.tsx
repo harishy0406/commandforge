@@ -46,6 +46,7 @@ export const ExecutionHistoryPage: React.FC<ExecutionHistoryPageProps> = ({
   const [showPurgeModal, setShowPurgeModal] = useState(false);
   const [purgeDaysOption, setPurgeDaysOption] = useState<number>(30);
   const [isPurging, setIsPurging] = useState(false);
+  const [isExporting, setIsExporting] = useState<'csv' | 'json' | null>(null);
 
   const loadHistory = async () => {
     try {
@@ -87,38 +88,15 @@ export const ExecutionHistoryPage: React.FC<ExecutionHistoryPageProps> = ({
 
   const totalPages = Math.max(1, Math.ceil(total / 15));
 
-  const handleExportJson = () => {
-    if (records.length === 0) return;
-    const dataStr = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(records, null, 2));
-    const downloadAnchor = document.createElement('a');
-    downloadAnchor.setAttribute('href', dataStr);
-    downloadAnchor.setAttribute('download', `commandforge-audit-${new Date().toISOString().slice(0, 10)}.json`);
-    document.body.appendChild(downloadAnchor);
-    downloadAnchor.click();
-    downloadAnchor.remove();
-  };
-
-  const handleExportCsv = () => {
-    if (records.length === 0) return;
-    const headers = ['id', 'created_at', 'prompt', 'command', 'risk_level', 'status', 'exit_code', 'duration_ms'];
-    const rows = records.map((r) => [
-      `"${r.id}"`,
-      `"${r.created_at}"`,
-      `"${(r.prompt || '').replace(/"/g, '""')}"`,
-      `"${(r.command || '').replace(/"/g, '""')}"`,
-      `"${r.risk_level}"`,
-      `"${r.status}"`,
-      r.exit_code !== undefined ? r.exit_code : '',
-      r.duration_ms.toFixed(1),
-    ]);
-    const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map((e) => e.join(','))].join('\n');
-    const encodedUri = encodeURI(csvContent);
-    const link = document.createElement('a');
-    link.setAttribute('href', encodedUri);
-    link.setAttribute('download', `commandforge-audit-${new Date().toISOString().slice(0, 10)}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
+  const handleExportServer = async (format: 'csv' | 'json') => {
+    try {
+      setIsExporting(format);
+      await ApiService.downloadAuditLog(format);
+    } catch (err) {
+      console.error('Failed to export audit log from server:', err);
+    } finally {
+      setIsExporting(null);
+    }
   };
 
   const handleConfirmPurge = async () => {
@@ -179,23 +157,23 @@ export const ExecutionHistoryPage: React.FC<ExecutionHistoryPageProps> = ({
               <div className="flex items-center gap-1 bg-slate-950/80 border border-slate-800 rounded-lg p-1">
                 <button
                   type="button"
-                  onClick={handleExportJson}
-                  disabled={records.length === 0}
+                  onClick={() => handleExportServer('json')}
+                  disabled={total === 0 || isExporting !== null}
                   className="flex items-center gap-1 rounded px-2 py-1 text-[11px] font-mono text-slate-400 hover:text-indigo-300 hover:bg-slate-900 disabled:opacity-40 transition-colors"
-                  title="Export audit records as JSON"
+                  title="Export complete persistent audit records as JSON"
                 >
-                  <Download className="h-3 w-3 text-indigo-400" />
-                  <span>JSON</span>
+                  <Download className={`h-3 w-3 text-indigo-400 ${isExporting === 'json' ? 'animate-bounce' : ''}`} />
+                  <span>{isExporting === 'json' ? 'Exporting...' : 'JSON'}</span>
                 </button>
                 <button
                   type="button"
-                  onClick={handleExportCsv}
-                  disabled={records.length === 0}
+                  onClick={() => handleExportServer('csv')}
+                  disabled={total === 0 || isExporting !== null}
                   className="flex items-center gap-1 rounded px-2 py-1 text-[11px] font-mono text-slate-400 hover:text-cyan-300 hover:bg-slate-900 disabled:opacity-40 transition-colors"
-                  title="Export audit records as CSV"
+                  title="Export complete persistent audit records as CSV"
                 >
-                  <Download className="h-3 w-3 text-cyan-400" />
-                  <span>CSV</span>
+                  <Download className={`h-3 w-3 text-cyan-400 ${isExporting === 'csv' ? 'animate-bounce' : ''}`} />
+                  <span>{isExporting === 'csv' ? 'Exporting...' : 'CSV'}</span>
                 </button>
 
                 <button
