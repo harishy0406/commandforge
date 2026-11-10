@@ -62,7 +62,7 @@ TEST(ApiIntegrationTest, FullControllerWorkflow) {
         auto summary = controller.handleDashboardSummary();
         EXPECT_TRUE(summary.contains("total_executed"));
 
-        // 4b. History Export (CSV & JSON)
+        // 4b. History Export (CSV & JSON, full and filtered)
         std::string csvExport = controller.handleExportHistory("csv");
         EXPECT_FALSE(csvExport.empty());
         EXPECT_NE(csvExport.find("id,created_at,risk_level"), std::string::npos);
@@ -71,10 +71,28 @@ TEST(ApiIntegrationTest, FullControllerWorkflow) {
         EXPECT_FALSE(jsonExport.empty());
         auto parsedExport = nlohmann::json::parse(jsonExport);
         EXPECT_TRUE(parsedExport.is_array());
+        EXPECT_GE(parsedExport.size(), 1u);
+
+        std::string rejectedJson = controller.handleExportHistory("json", "rejected", "");
+        auto parsedRejected = nlohmann::json::parse(rejectedJson);
+        EXPECT_TRUE(parsedRejected.is_array());
+        for (const auto& rec : parsedRejected) {
+            EXPECT_EQ(rec["status"], "rejected");
+        }
+
+        // 4c. History Pagination Clamping
+        auto clampedHistory = controller.handleGetHistory(-2, 500, "", "");
+        EXPECT_EQ(clampedHistory["page"], 1);
+        EXPECT_EQ(clampedHistory["limit"], 20);
 
         // 5. Settings
         auto settings = controller.handleGetSettings();
         EXPECT_EQ(settings["ai_provider"], "mock");
+
+        // 6. Negative Purge Retention Guard
+        auto purgeRes = controller.handlePurgeHistory(-5);
+        EXPECT_EQ(purgeRes["status"], "success");
+        EXPECT_EQ(purgeRes["older_than_days"], 0);
     }
 
     std::remove(testDb.c_str());

@@ -228,11 +228,13 @@ static std::string escapeCsvField(const std::string& field) {
     return escaped;
 }
 
-std::string ApiController::handleExportHistory(const std::string& format) {
+std::string ApiController::handleExportHistory(const std::string& format,
+                                               const std::string& status,
+                                               const std::string& search) {
     std::vector<CommandRecord> records;
     if (repository_) {
         int total = 0;
-        records = repository_->getHistory(1, 100000, "", "", total);
+        records = repository_->getHistory(1, 100000, status, search, total);
     }
 
     if (format == "json") {
@@ -270,6 +272,9 @@ nlohmann::json ApiController::handleCancelExecution(const std::string& id) {
 nlohmann::json ApiController::handlePurgeHistory(int older_than_days) {
     if (!repository_) {
         return {{"error", "History repository is not initialized"}};
+    }
+    if (older_than_days < 0) {
+        older_than_days = 0;
     }
     int purged = repository_->purgeHistory(older_than_days);
     return {
