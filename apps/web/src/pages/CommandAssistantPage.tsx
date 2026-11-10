@@ -172,24 +172,66 @@ export const CommandAssistantPage: React.FC = () => {
 
   const splitPipelineCommands = (cmd: string): string[] => {
     if (!cmd) return [];
-    const segments = cmd.split(/(&&|\|\||;|\|)/);
     const parts: string[] = [];
     let current = '';
-    for (let i = 0; i < segments.length; i++) {
-      const token = segments[i].trim();
-      if (token === '&&' || token === '||' || token === ';' || token === '|') {
-        if (current.trim()) {
-          parts.push(current.trim());
-          current = '';
-        }
-      } else {
-        current += (current ? ' ' : '') + segments[i];
+    let quote: "'" | '"' | null = null;
+
+    for (let i = 0; i < cmd.length; i++) {
+      const ch = cmd[i];
+      if (ch === '\\' && quote !== "'" && i + 1 < cmd.length) {
+        current += ch + cmd[i + 1];
+        i++;
+        continue;
       }
+      if (quote) {
+        if (ch === quote) quote = null;
+        current += ch;
+        continue;
+      }
+      if (ch === "'" || ch === '"') {
+        quote = ch;
+        current += ch;
+        continue;
+      }
+
+      const twoChar = cmd.slice(i, i + 2);
+      if (twoChar === '&&' || twoChar === '||') {
+        if (current.trim()) parts.push(current.trim());
+        current = '';
+        i++;
+        continue;
+      }
+      if (ch === ';' || ch === '|') {
+        if (current.trim()) parts.push(current.trim());
+        current = '';
+        continue;
+      }
+      current += ch;
     }
+
     if (current.trim()) {
       parts.push(current.trim());
     }
-    return parts.filter((p) => p.length > 0);
+    return parts;
+  };
+
+  const analyzePipeline = async (commandText: string) => {
+    const stages = splitPipelineCommands(commandText);
+    if (stages.length <= 1) {
+      setPipelineAnalysis(null);
+      setIsAnalyzingPipeline(false);
+      return;
+    }
+
+    try {
+      setIsAnalyzingPipeline(true);
+      const analysis = await ApiService.validateBatchCommands(stages);
+      setPipelineAnalysis(analysis);
+    } catch {
+      setPipelineAnalysis(null);
+    } finally {
+      setIsAnalyzingPipeline(false);
+    }
   };
 
   const toggleSpeech = () => {
@@ -242,6 +284,33 @@ export const CommandAssistantPage: React.FC = () => {
     { tag: 'TEST', title: 'Blocked Root Wipe', query: 'Recursively force delete system root directory' },
   ];
 
+  const validateAndSyncCommand = async (cmdText: string) => {
+    if (!cmdText.trim()) return;
+    try {
+      const val = await ApiService.validateCommand(cmdText);
+      setGenerated((prev) => {
+        if (!prev) return null;
+        const blocked = val.blocked_reasons && val.blocked_reasons.length > 0;
+        return {
+          ...prev,
+          command: cmdText,
+          risk_level: val.risk_level,
+          risk_reason: blocked
+            ? val.blocked_reasons[0]
+            : val.warnings.length > 0
+            ? val.warnings[0]
+            : 'Safe command verified by AST policy engine.',
+          requires_confirmation: val.risk_level === 'high',
+          potentially_destructive: blocked || val.risk_level === 'high' || val.warnings.length > 0,
+        };
+      });
+
+      void analyzePipeline(cmdText);
+    } catch {
+      // Ignore live validation errors
+    }
+  };
+
   // Re-assess risk whenever editedCommand changes
   useEffect(() => {
     if (!generated || !isEditing) return;
@@ -250,38 +319,8 @@ export const CommandAssistantPage: React.FC = () => {
       clearTimeout(debounceTimerRef.current);
     }
 
-    debounceTimerRef.current = setTimeout(async () => {
-      if (!editedCommand.trim()) return;
-      try {
-        const val = await ApiService.validateCommand(editedCommand);
-        setGenerated((prev) => {
-          if (!prev) return null;
-          const blocked = val.blocked_reasons && val.blocked_reasons.length > 0;
-          return {
-            ...prev,
-            command: editedCommand,
-            risk_level: val.risk_level,
-            risk_reason: blocked
-              ? val.blocked_reasons[0]
-              : val.warnings.length > 0
-              ? val.warnings[0]
-              : 'Safe command verified by AST policy engine.',
-            requires_confirmation: val.risk_level === 'high',
-            potentially_destructive: blocked || val.risk_level === 'high' || val.warnings.length > 0,
-          };
-        });
-
-        const stages = splitPipelineCommands(editedCommand);
-        if (stages.length > 1) {
-          ApiService.validateBatchCommands(stages)
-            .then((analysis) => setPipelineAnalysis(analysis))
-            .catch(() => setPipelineAnalysis(null));
-        } else {
-          setPipelineAnalysis(null);
-        }
-      } catch {
-        // Ignore live validation errors
-      }
+    debounceTimerRef.current = setTimeout(() => {
+      void validateAndSyncCommand(editedCommand);
     }, 350);
 
     return () => {
@@ -308,16 +347,7 @@ export const CommandAssistantPage: React.FC = () => {
       if (res.provider) setActiveProvider(res.provider);
       if (res.model) setActiveModel(res.model);
 
-      const stages = splitPipelineCommands(res.command);
-      if (stages.length > 1) {
-        setIsAnalyzingPipeline(true);
-        ApiService.validateBatchCommands(stages)
-          .then((analysis) => setPipelineAnalysis(analysis))
-          .catch(() => setPipelineAnalysis(null))
-          .finally(() => setIsAnalyzingPipeline(false));
-      } else {
-        setPipelineAnalysis(null);
-      }
+      void analyzePipeline(res.command);
 
       setPromptHistory((prev) => {
         const next = [q, ...prev.filter((p) => p !== q)].slice(0, 10);
@@ -557,6 +587,7 @@ export const CommandAssistantPage: React.FC = () => {
                           type="button"
                           onClick={() => {
                             setPrompt(pb.query);
+                            setShowPlaybooksDrawer(false);
                             handleGenerate(pb.query);
                           }}
                           className="rounded px-2 py-1 text-[10px] font-mono font-medium text-indigo-400 hover:bg-indigo-950/40 hover:text-indigo-300 transition-colors"
@@ -567,8 +598,13 @@ export const CommandAssistantPage: React.FC = () => {
                         <button
                           type="button"
                           onClick={() => {
+                            setPrompt(pb.query);
                             setEditedCommand(pb.commandSnippet);
                             setIsEditing(false);
+                            setExecutionResult(null);
+                            setHighRiskConfirmed(false);
+                            setError(null);
+                            setShowPlaybooksDrawer(false);
                             setGenerated({
                               command: pb.commandSnippet,
                               explanation: pb.query,
@@ -578,6 +614,7 @@ export const CommandAssistantPage: React.FC = () => {
                               requires_confirmation: false,
                               suggested_alternatives: [],
                             });
+                            void analyzePipeline(pb.commandSnippet);
                           }}
                           className="rounded bg-slate-800 px-2 py-1 text-[10px] font-mono font-medium text-slate-200 hover:bg-indigo-600 hover:text-white transition-colors"
                           title="Load directly into Audited Command Spec"
@@ -846,50 +883,65 @@ export const CommandAssistantPage: React.FC = () => {
                       Pipeline Pre-Flight Decomposition
                     </span>
                     <span className="rounded bg-cyan-500/10 px-2 py-0.5 text-[10px] font-mono text-cyan-400 border border-cyan-500/20">
-                      {pipelineAnalysis.total} Sub-Stages
+                      {pipelineAnalysis.summary.total} Sub-Stages
                     </span>
                   </div>
                   <span
                     className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[10px] font-mono font-bold ${
-                      pipelineAnalysis.all_allowed
+                      pipelineAnalysis.summary.all_allowed
                         ? 'bg-emerald-500/10 text-emerald-300 border border-emerald-500/30'
                         : 'bg-rose-500/10 text-rose-300 border border-rose-500/30'
                     }`}
                   >
-                    ● {pipelineAnalysis.all_allowed ? 'All Stages Safe' : `${pipelineAnalysis.blocked} Blocked Stage(s)`}
+                    ● {pipelineAnalysis.summary.all_allowed ? 'All Stages Safe' : `${pipelineAnalysis.summary.blocked} Blocked Stage(s)`}
                   </span>
                 </div>
 
                 <div className="space-y-2">
-                  {pipelineAnalysis.results.map((item, idx) => (
-                    <div
-                      key={idx}
-                      className={`flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-2.5 rounded-lg border text-xs font-mono transition-colors ${
-                        item.is_allowed
-                          ? 'bg-slate-900/60 border-white/[0.04]'
-                          : 'bg-rose-950/30 border-rose-500/30'
-                      }`}
-                    >
-                      <div className="flex items-center gap-2 min-w-0">
-                        <span className="shrink-0 rounded bg-slate-800 px-1.5 py-0.5 text-[10px] text-slate-400 font-bold">
-                          Step {idx + 1}
-                        </span>
-                        <span className="truncate text-slate-200 font-semibold">{item.command}</span>
+                  {pipelineAnalysis.results.map((item, idx) => {
+                    const reasonNote =
+                      item.blocked_reasons?.[0] || item.warnings?.[0] || null;
+                    return (
+                      <div
+                        key={idx}
+                        className={`p-2.5 rounded-lg border text-xs font-mono transition-colors space-y-1.5 ${
+                          item.is_allowed
+                            ? 'bg-slate-900/60 border-white/[0.04]'
+                            : 'bg-rose-950/30 border-rose-500/30'
+                        }`}
+                      >
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                          <div className="flex items-center gap-2 min-w-0">
+                            <span className="shrink-0 rounded bg-slate-800 px-1.5 py-0.5 text-[10px] text-slate-400 font-bold">
+                              Step {idx + 1}
+                            </span>
+                            <span className="truncate text-slate-200 font-semibold">{item.command}</span>
+                          </div>
+                          <div className="flex items-center gap-2 shrink-0">
+                            {getRiskBadge(item.risk_level)}
+                            <span
+                              className={`rounded px-1.5 py-0.5 text-[10px] font-bold ${
+                                item.is_allowed
+                                  ? 'bg-emerald-500/15 text-emerald-400'
+                                  : 'bg-rose-500/15 text-rose-400'
+                              }`}
+                            >
+                              {item.is_allowed ? 'ALLOWED' : 'BLOCKED'}
+                            </span>
+                          </div>
+                        </div>
+                        {reasonNote && (
+                          <p
+                            className={`text-[11px] font-sans leading-snug pl-1 ${
+                              item.is_allowed ? 'text-amber-300/90' : 'text-rose-300'
+                            }`}
+                          >
+                            {reasonNote}
+                          </p>
+                        )}
                       </div>
-                      <div className="flex items-center gap-2 shrink-0">
-                        {getRiskBadge(item.risk_level)}
-                        <span
-                          className={`rounded px-1.5 py-0.5 text-[10px] font-bold ${
-                            item.is_allowed
-                              ? 'bg-emerald-500/15 text-emerald-400'
-                              : 'bg-rose-500/15 text-rose-400'
-                          }`}
-                        >
-                          {item.is_allowed ? 'ALLOWED' : 'BLOCKED'}
-                        </span>
-                      </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
             )}
@@ -984,6 +1036,8 @@ export const CommandAssistantPage: React.FC = () => {
                         onClick={() => {
                           setEditedCommand(alt);
                           setIsEditing(false);
+                          setHighRiskConfirmed(false);
+                          void validateAndSyncCommand(alt);
                         }}
                         className="group flex items-center justify-between rounded-lg border border-white/[0.06] bg-slate-950/60 px-3 py-2 text-xs font-mono text-slate-300 hover:border-indigo-500/40 hover:bg-slate-900 cursor-pointer transition-colors"
                         title="Click to use this alternative command"
