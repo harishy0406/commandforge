@@ -243,7 +243,7 @@ SystemDiagnostics SystemMonitor::getDiagnostics(bool dockerAvailable) {
 #endif
     diag.docker_available = dockerAvailable;
     diag.docker_mode = dockerAvailable ? "Hermetic Docker Container (UID 1000, unprivileged)" : "Restricted POSIX Subprocess";
-    diag.active_ast_rules = 18;
+    diag.active_ast_rules = 21;
     diag.storage_engine = "SQLite3 WAL";
     return diag;
 }

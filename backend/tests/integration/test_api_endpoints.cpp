@@ -85,9 +85,12 @@ TEST(ApiIntegrationTest, FullControllerWorkflow) {
         EXPECT_EQ(clampedHistory["page"], 1);
         EXPECT_EQ(clampedHistory["limit"], 20);
 
-        // 5. Settings
+        // 5. Settings & Diagnostics
         auto settings = controller.handleGetSettings();
         EXPECT_EQ(settings["ai_provider"], "mock");
+
+        auto diag = controller.handleGetSystemDiagnostics();
+        EXPECT_EQ(diag["security"]["active_ast_rules"], 21);
 
         // 6. Negative Purge Retention Guard
         auto purgeRes = controller.handlePurgeHistory(-5);

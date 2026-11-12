@@ -294,7 +294,11 @@ nlohmann::json ApiController::handleGetSystemMetrics() {
 nlohmann::json ApiController::handleGetSystemDiagnostics() {
     if (system_monitor_) {
         bool dockerAvail = execution_engine_ ? execution_engine_->isDockerAvailable() : false;
-        return system_monitor_->getDiagnostics(dockerAvail).toJson();
+        auto diag = system_monitor_->getDiagnostics(dockerAvail);
+        if (risk_analyzer_) {
+            diag.active_ast_rules = static_cast<int>(risk_analyzer_->getRuleCount());
+        }
+        return diag.toJson();
     }
     return {{"error", "System monitor is not active"}};
 }

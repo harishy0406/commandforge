@@ -14,6 +14,7 @@ public:
 
     ValidationResult validate(const std::string& command) const;
     RiskLevel assessRisk(const std::string& command, std::string& reasonOut, bool& isDestructiveOut) const;
+    size_t getRuleCount() const { return rules_.size(); }
 
 private:
     struct Rule {

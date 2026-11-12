@@ -82,4 +82,5 @@ TEST(RiskAnalyzerTest, EmptyAndHugeCommandsRejected) {
     std::string hugeCmd(5000, 'a');
     ValidationResult v2 = analyzer.validate(hugeCmd);
     EXPECT_FALSE(v2.is_valid);
+    EXPECT_EQ(analyzer.getRuleCount(), 21u);
 }

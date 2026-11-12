@@ -30,7 +30,7 @@ TEST(SystemMonitorTest, ProbesSystemDiagnostics) {
     EXPECT_GE(diag.memory_rss_mb, 0.0);
     EXPECT_TRUE(diag.docker_available);
     EXPECT_FALSE(diag.docker_socket.empty());
-    EXPECT_EQ(diag.active_ast_rules, 18);
+    EXPECT_EQ(diag.active_ast_rules, 21);
 
     nlohmann::json j = diag.toJson();
     EXPECT_TRUE(j.contains("os_platform"));
