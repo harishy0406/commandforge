@@ -88,10 +88,12 @@ export const ExecutionHistoryPage: React.FC<ExecutionHistoryPageProps> = ({
 
   const totalPages = Math.max(1, Math.ceil(total / 15));
 
+  const isFilteredExport = statusFilter !== 'all' || searchTerm.trim().length > 0;
+
   const handleExportServer = async (format: 'csv' | 'json') => {
     try {
       setIsExporting(format);
-      await ApiService.downloadAuditLog(format);
+      await ApiService.downloadAuditLog(format, statusFilter, searchTerm);
     } catch (err) {
       console.error('Failed to export audit log from server:', err);
     } finally {
@@ -160,7 +162,7 @@ export const ExecutionHistoryPage: React.FC<ExecutionHistoryPageProps> = ({
                   onClick={() => handleExportServer('json')}
                   disabled={total === 0 || isExporting !== null}
                   className="flex items-center gap-1 rounded px-2 py-1 text-[11px] font-mono text-slate-400 hover:text-indigo-300 hover:bg-slate-900 disabled:opacity-40 transition-colors"
-                  title="Export complete persistent audit records as JSON"
+                  title={isFilteredExport ? 'Export filtered audit records as JSON' : 'Export complete persistent audit records as JSON'}
                 >
                   <Download className={`h-3 w-3 text-indigo-400 ${isExporting === 'json' ? 'animate-bounce' : ''}`} />
                   <span>{isExporting === 'json' ? 'Exporting...' : 'JSON'}</span>
@@ -170,7 +172,7 @@ export const ExecutionHistoryPage: React.FC<ExecutionHistoryPageProps> = ({
                   onClick={() => handleExportServer('csv')}
                   disabled={total === 0 || isExporting !== null}
                   className="flex items-center gap-1 rounded px-2 py-1 text-[11px] font-mono text-slate-400 hover:text-cyan-300 hover:bg-slate-900 disabled:opacity-40 transition-colors"
-                  title="Export complete persistent audit records as CSV"
+                  title={isFilteredExport ? 'Export filtered audit records as CSV' : 'Export complete persistent audit records as CSV'}
                 >
                   <Download className={`h-3 w-3 text-cyan-400 ${isExporting === 'csv' ? 'animate-bounce' : ''}`} />
                   <span>{isExporting === 'csv' ? 'Exporting...' : 'CSV'}</span>

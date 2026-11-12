@@ -153,6 +153,7 @@ export const CommandAssistantPage: React.FC = () => {
   const [activeProvider, setActiveProvider] = useState<string>('');
   const [activeModel, setActiveModel] = useState<string>('');
   const [isDockerReady, setIsDockerReady] = useState(false);
+  const [activeRuleCount, setActiveRuleCount] = useState<number>(21);
 
   // In-session prompt recall history
   const [promptHistory, setPromptHistory] = useState<string[]>(() => {
@@ -272,6 +273,14 @@ export const CommandAssistantPage: React.FC = () => {
         setActiveProvider(h.ai_provider || 'Mock');
         setActiveModel(h.ai_model || 'rules-v1');
         setIsDockerReady(Boolean(h.docker_available));
+      })
+      .catch(() => {});
+
+    ApiService.getSystemDiagnostics()
+      .then((diag) => {
+        if (diag.security?.active_ast_rules) {
+          setActiveRuleCount(diag.security.active_ast_rules);
+        }
       })
       .catch(() => {});
   }, []);
@@ -781,7 +790,7 @@ export const CommandAssistantPage: React.FC = () => {
                   <Zap className="h-3.5 w-3.5 text-purple-400" />
                   <span>Safety AST Policy</span>
                 </div>
-                <span className="font-mono text-[11px] text-purple-300 font-semibold">14 Strict Rules</span>
+                <span className="font-mono text-[11px] text-purple-300 font-semibold">{activeRuleCount} Strict Rules</span>
               </div>
             </div>
           </div>
