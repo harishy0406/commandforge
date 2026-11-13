@@ -96,6 +96,24 @@ TEST(ApiIntegrationTest, FullControllerWorkflow) {
         auto purgeRes = controller.handlePurgeHistory(-5);
         EXPECT_EQ(purgeRes["status"], "success");
         EXPECT_EQ(purgeRes["older_than_days"], 0);
+
+        // 7. Execution Status & Input Validation
+        auto execStatusExisting = controller.handleGetExecutionStatus("seed-1");
+        EXPECT_TRUE(execStatusExisting.contains("status"));
+        EXPECT_FALSE(execStatusExisting["active"].get<bool>());
+
+        auto execStatusMissing = controller.handleGetExecutionStatus("missing-task-id");
+        EXPECT_EQ(execStatusMissing["status"], "not_found");
+        EXPECT_FALSE(execStatusMissing["active"].get<bool>());
+
+        auto emptyCmdRes = controller.handleExecuteCommand({{"command", "   "}});
+        EXPECT_TRUE(emptyCmdRes.contains("error"));
+
+        auto badTimeoutTypeRes = controller.handleExecuteCommand({{"command", "ls"}, {"timeout_seconds", "five"}});
+        EXPECT_TRUE(badTimeoutTypeRes.contains("error"));
+
+        auto outOfRangeTimeoutRes = controller.handleExecuteCommand({{"command", "ls"}, {"timeout_seconds", 500}});
+        EXPECT_TRUE(outOfRangeTimeoutRes.contains("error"));
     }
 
     std::remove(testDb.c_str());

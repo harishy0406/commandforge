@@ -168,13 +168,34 @@ nlohmann::json ApiController::handleExecuteCommand(const nlohmann::json& request
         return {{"error", "Field 'command' is required and must be a string."}};
     }
 
+    std::string commandStr = requestBody["command"].get<std::string>();
+    if (commandStr.find_first_not_of(" \t\n\r") == std::string::npos) {
+        return {{"error", "Command string cannot be empty."}};
+    }
+
+    std::string execId = requestBody.value("id", "");
+    if (execId.length() > 128) {
+        return {{"error", "Execution ID exceeds maximum length of 128 characters."}};
+    }
+
+    int timeoutVal = config_.execution_timeout_seconds;
+    if (requestBody.contains("timeout_seconds")) {
+        if (!requestBody["timeout_seconds"].is_number_integer()) {
+            return {{"error", "Field 'timeout_seconds' must be an integer."}};
+        }
+        timeoutVal = requestBody["timeout_seconds"].get<int>();
+        if (timeoutVal < 1 || timeoutVal > 300) {
+            return {{"error", "Field 'timeout_seconds' must be between 1 and 300 seconds."}};
+        }
+    }
+
     ExecutionRequest req;
-    req.id = requestBody.value("id", "");
-    req.command = requestBody["command"].get<std::string>();
+    req.id = execId;
+    req.command = commandStr;
     req.prompt = requestBody.value("prompt", "");
     req.risk_level = stringToRiskLevel(requestBody.value("risk_level", "low"));
     req.user_approved = requestBody.value("user_approved", false);
-    req.timeout_seconds = requestBody.value("timeout_seconds", config_.execution_timeout_seconds);
+    req.timeout_seconds = timeoutVal;
 
     ExecutionResult result = execution_engine_->execute(req);
     return result.toJson();
@@ -266,6 +287,29 @@ nlohmann::json ApiController::handleCancelExecution(const std::string& id) {
     return {
         {"id", id},
         {"status", cancelled ? "cancelled" : "not_found_or_finished"}
+    };
+}
+
+nlohmann::json ApiController::handleGetExecutionStatus(const std::string& id) {
+    if (execution_engine_ && execution_engine_->isExecutionActive(id)) {
+        return {
+            {"id", id},
+            {"status", "running"},
+            {"active", true}
+        };
+    }
+    if (repository_) {
+        auto item = repository_->getById(id);
+        if (item) {
+            nlohmann::json j = item->toJson();
+            j["active"] = false;
+            return j;
+        }
+    }
+    return {
+        {"id", id},
+        {"status", "not_found"},
+        {"active", false}
     };
 }
 

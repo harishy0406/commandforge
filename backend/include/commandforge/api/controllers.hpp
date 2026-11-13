@@ -34,6 +34,7 @@ public:
                                     const std::string& status = "",
                                     const std::string& search = "");
     nlohmann::json handleCancelExecution(const std::string& id);
+    nlohmann::json handleGetExecutionStatus(const std::string& id);
     nlohmann::json handlePurgeHistory(int older_than_days = 0);
     nlohmann::json handleGetSystemMetrics();
     nlohmann::json handleGetSystemDiagnostics();

@@ -47,6 +47,11 @@ bool ExecutionEngine::isDockerAvailable() const {
     return docker_adapter_.checkDockerAvailable();
 }
 
+bool ExecutionEngine::isExecutionActive(const std::string& executionId) {
+    std::lock_guard<std::mutex> lock(mutex_);
+    return active_executions_.find(executionId) != active_executions_.end();
+}
+
 ExecutionResult ExecutionEngine::execute(const ExecutionRequest& request) {
     std::string execId = request.id.empty() ? generateUuid() : request.id;
     std::string timestamp = currentTimestamp();

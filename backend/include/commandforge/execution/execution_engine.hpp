@@ -20,6 +20,7 @@ public:
 
     ExecutionResult execute(const ExecutionRequest& request);
     bool cancelExecution(const std::string& executionId);
+    bool isExecutionActive(const std::string& executionId);
     bool isDockerAvailable() const;
 
 private:

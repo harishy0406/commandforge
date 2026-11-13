@@ -155,6 +155,14 @@ void HttpServer::setupRoutes() {
         sendJson(res, response, status);
     });
 
+    // GET /api/commands/execute/:id
+    server_.Get(R"(/api/commands/execute/([a-zA-Z0-9\-]+))", [this](const httplib::Request& req, httplib::Response& res) {
+        std::string id = req.matches[1];
+        auto response = controller_->handleGetExecutionStatus(id);
+        int status = (response.value("status", "") == "not_found") ? 404 : 200;
+        sendJson(res, response, status);
+    });
+
     // POST /api/commands/execute/:id/cancel
     server_.Post(R"(/api/commands/execute/([a-zA-Z0-9\-]+)/cancel)", [this](const httplib::Request& req, httplib::Response& res) {
         std::string id = req.matches[1];
