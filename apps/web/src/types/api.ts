@@ -30,13 +30,17 @@ export interface BatchValidationItem {
   is_allowed: boolean;
 }
 
-export interface BatchValidationResponse {
+export interface BatchValidationSummary {
   total: number;
   allowed: number;
   blocked: number;
   highest_risk: RiskLevel;
   all_allowed: boolean;
+}
+
+export interface BatchValidationResponse {
   results: BatchValidationItem[];
+  summary: BatchValidationSummary;
 }
 
 export interface ExecutionRequest {

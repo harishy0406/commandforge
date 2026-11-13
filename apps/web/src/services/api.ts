@@ -105,6 +105,12 @@ export class ApiService {
     return res.json();
   }
 
+  static async getExecutionStatus(id: string): Promise<Record<string, any>> {
+    const res = await fetch(`${API_BASE}/commands/execute/${id}`);
+    if (!res.ok) throw new Error(`Failed to get execution status: ${res.statusText}`);
+    return res.json();
+  }
+
   static async getSystemMetrics(): Promise<SystemMetrics> {
     const res = await fetch(`${API_BASE}/system/metrics`);
     if (!res.ok) throw new Error(`Failed to load metrics`);
@@ -143,18 +149,23 @@ export class ApiService {
     return res.json();
   }
 
-  static getExportUrl(format: 'csv' | 'json' = 'csv'): string {
-    return `${API_BASE}/commands/history/export?format=${format}`;
+  static getExportUrl(format: 'csv' | 'json' = 'csv', status?: string, search?: string): string {
+    const params = new URLSearchParams({ format });
+    if (status && status !== 'all') params.append('status', status);
+    if (search && search.trim()) params.append('search', search.trim());
+    return `${API_BASE}/commands/history/export?${params.toString()}`;
   }
 
-  static async downloadAuditLog(format: 'csv' | 'json' = 'csv'): Promise<void> {
-    const res = await fetch(this.getExportUrl(format));
+  static async downloadAuditLog(format: 'csv' | 'json' = 'csv', status?: string, search?: string): Promise<void> {
+    const res = await fetch(this.getExportUrl(format, status, search));
     if (!res.ok) throw new Error('Failed to export audit log from server');
     const blob = await res.blob();
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `commandforge-audit-log-${new Date().toISOString().slice(0, 10)}.${format}`;
+    const isFiltered = (status && status !== 'all') || Boolean(search && search.trim());
+    const dateStamp = new Date().toISOString().slice(0, 10);
+    a.download = `commandforge-audit-log${isFiltered ? '-filtered' : ''}-${dateStamp}.${format}`;
     document.body.appendChild(a);
     a.click();
     a.remove();

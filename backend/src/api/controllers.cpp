@@ -168,13 +168,34 @@ nlohmann::json ApiController::handleExecuteCommand(const nlohmann::json& request
         return {{"error", "Field 'command' is required and must be a string."}};
     }
 
+    std::string commandStr = requestBody["command"].get<std::string>();
+    if (commandStr.find_first_not_of(" \t\n\r") == std::string::npos) {
+        return {{"error", "Command string cannot be empty."}};
+    }
+
+    std::string execId = requestBody.value("id", "");
+    if (execId.length() > 128) {
+        return {{"error", "Execution ID exceeds maximum length of 128 characters."}};
+    }
+
+    int timeoutVal = config_.execution_timeout_seconds;
+    if (requestBody.contains("timeout_seconds")) {
+        if (!requestBody["timeout_seconds"].is_number_integer()) {
+            return {{"error", "Field 'timeout_seconds' must be an integer."}};
+        }
+        timeoutVal = requestBody["timeout_seconds"].get<int>();
+        if (timeoutVal < 1 || timeoutVal > 300) {
+            return {{"error", "Field 'timeout_seconds' must be between 1 and 300 seconds."}};
+        }
+    }
+
     ExecutionRequest req;
-    req.id = requestBody.value("id", "");
-    req.command = requestBody["command"].get<std::string>();
+    req.id = execId;
+    req.command = commandStr;
     req.prompt = requestBody.value("prompt", "");
     req.risk_level = stringToRiskLevel(requestBody.value("risk_level", "low"));
     req.user_approved = requestBody.value("user_approved", false);
-    req.timeout_seconds = requestBody.value("timeout_seconds", config_.execution_timeout_seconds);
+    req.timeout_seconds = timeoutVal;
 
     ExecutionResult result = execution_engine_->execute(req);
     return result.toJson();
@@ -228,11 +249,13 @@ static std::string escapeCsvField(const std::string& field) {
     return escaped;
 }
 
-std::string ApiController::handleExportHistory(const std::string& format) {
+std::string ApiController::handleExportHistory(const std::string& format,
+                                               const std::string& status,
+                                               const std::string& search) {
     std::vector<CommandRecord> records;
     if (repository_) {
         int total = 0;
-        records = repository_->getHistory(1, 100000, "", "", total);
+        records = repository_->getHistory(1, 100000, status, search, total);
     }
 
     if (format == "json") {
@@ -267,9 +290,35 @@ nlohmann::json ApiController::handleCancelExecution(const std::string& id) {
     };
 }
 
+nlohmann::json ApiController::handleGetExecutionStatus(const std::string& id) {
+    if (execution_engine_ && execution_engine_->isExecutionActive(id)) {
+        return {
+            {"id", id},
+            {"status", "running"},
+            {"active", true}
+        };
+    }
+    if (repository_) {
+        auto item = repository_->getById(id);
+        if (item) {
+            nlohmann::json j = item->toJson();
+            j["active"] = false;
+            return j;
+        }
+    }
+    return {
+        {"id", id},
+        {"status", "not_found"},
+        {"active", false}
+    };
+}
+
 nlohmann::json ApiController::handlePurgeHistory(int older_than_days) {
     if (!repository_) {
         return {{"error", "History repository is not initialized"}};
+    }
+    if (older_than_days < 0) {
+        older_than_days = 0;
     }
     int purged = repository_->purgeHistory(older_than_days);
     return {
@@ -289,7 +338,11 @@ nlohmann::json ApiController::handleGetSystemMetrics() {
 nlohmann::json ApiController::handleGetSystemDiagnostics() {
     if (system_monitor_) {
         bool dockerAvail = execution_engine_ ? execution_engine_->isDockerAvailable() : false;
-        return system_monitor_->getDiagnostics(dockerAvail).toJson();
+        auto diag = system_monitor_->getDiagnostics(dockerAvail);
+        if (risk_analyzer_) {
+            diag.active_ast_rules = static_cast<int>(risk_analyzer_->getRuleCount());
+        }
+        return diag.toJson();
     }
     return {{"error", "System monitor is not active"}};
 }

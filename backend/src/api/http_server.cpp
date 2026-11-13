@@ -4,6 +4,25 @@
 
 namespace commandforge {
 
+static int parseQueryInt(const httplib::Request& req,
+                         const char* name,
+                         int defaultValue,
+                         int minValue,
+                         int maxValue) {
+    if (!req.has_param(name)) return defaultValue;
+    try {
+        const std::string raw = req.get_param_value(name);
+        size_t pos = 0;
+        int parsed = std::stoi(raw, &pos);
+        if (pos != raw.size()) return defaultValue;
+        if (parsed < minValue) return minValue;
+        if (parsed > maxValue) return maxValue;
+        return parsed;
+    } catch (...) {
+        return defaultValue;
+    }
+}
+
 HttpServer::HttpServer(std::string host, int port, std::shared_ptr<ApiController> controller)
     : host_(std::move(host)),
       port_(port),
@@ -106,8 +125,8 @@ void HttpServer::setupRoutes() {
 
     // GET /api/commands/history
     server_.Get("/api/commands/history", [this](const httplib::Request& req, httplib::Response& res) {
-        int page = req.has_param("page") ? std::stoi(req.get_param_value("page")) : 1;
-        int limit = req.has_param("limit") ? std::stoi(req.get_param_value("limit")) : 20;
+        int page = parseQueryInt(req, "page", 1, 1, 100000);
+        int limit = parseQueryInt(req, "limit", 20, 1, 100);
         std::string status = req.has_param("status") ? req.get_param_value("status") : "";
         std::string search = req.has_param("search") ? req.get_param_value("search") : "";
         sendJson(res, controller_->handleGetHistory(page, limit, status, search));
@@ -116,11 +135,14 @@ void HttpServer::setupRoutes() {
     // GET /api/commands/history/export
     server_.Get("/api/commands/history/export", [this](const httplib::Request& req, httplib::Response& res) {
         std::string format = req.has_param("format") ? req.get_param_value("format") : "csv";
+        std::string status = req.has_param("status") ? req.get_param_value("status") : "";
+        std::string search = req.has_param("search") ? req.get_param_value("search") : "";
         if (format == "json") {
-            res.set_content(controller_->handleExportHistory("json"), "application/json");
+            res.set_header("Content-Disposition", "attachment; filename=\"commandforge-audit-log.json\"");
+            res.set_content(controller_->handleExportHistory("json", status, search), "application/json");
         } else {
             res.set_header("Content-Disposition", "attachment; filename=\"commandforge-audit-log.csv\"");
-            res.set_content(controller_->handleExportHistory("csv"), "text/csv");
+            res.set_content(controller_->handleExportHistory("csv", status, search), "text/csv");
         }
         res.status = 200;
     });
@@ -133,6 +155,14 @@ void HttpServer::setupRoutes() {
         sendJson(res, response, status);
     });
 
+    // GET /api/commands/execute/:id
+    server_.Get(R"(/api/commands/execute/([a-zA-Z0-9\-]+))", [this](const httplib::Request& req, httplib::Response& res) {
+        std::string id = req.matches[1];
+        auto response = controller_->handleGetExecutionStatus(id);
+        int status = (response.value("status", "") == "not_found") ? 404 : 200;
+        sendJson(res, response, status);
+    });
+
     // POST /api/commands/execute/:id/cancel
     server_.Post(R"(/api/commands/execute/([a-zA-Z0-9\-]+)/cancel)", [this](const httplib::Request& req, httplib::Response& res) {
         std::string id = req.matches[1];
@@ -141,7 +171,7 @@ void HttpServer::setupRoutes() {
 
     // DELETE /api/commands/history
     server_.Delete("/api/commands/history", [this](const httplib::Request& req, httplib::Response& res) {
-        int olderThan = req.has_param("older_than_days") ? std::stoi(req.get_param_value("older_than_days")) : 0;
+        int olderThan = parseQueryInt(req, "older_than_days", 0, 0, 36500);
         sendJson(res, controller_->handlePurgeHistory(olderThan));
     });
 
@@ -151,11 +181,13 @@ void HttpServer::setupRoutes() {
         if (!req.body.empty()) {
             try {
                 auto body = nlohmann::json::parse(req.body);
-                olderThan = body.value("older_than_days", 0);
+                if (body.contains("older_than_days") && body["older_than_days"].is_number_integer()) {
+                    olderThan = body["older_than_days"].get<int>();
+                }
             } catch (...) {}
         }
         if (req.has_param("older_than_days")) {
-            olderThan = std::stoi(req.get_param_value("older_than_days"));
+            olderThan = parseQueryInt(req, "older_than_days", olderThan, 0, 36500);
         }
         sendJson(res, controller_->handlePurgeHistory(olderThan));
     });
