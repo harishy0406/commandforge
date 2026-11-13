@@ -38,6 +38,12 @@ export const OverviewPage: React.FC<OverviewPageProps> = ({
   const [summary, setSummary] = useState<DashboardSummary | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [telemetryHistory, setTelemetryHistory] = useState<Array<{ time: string; cpu: number; memory: number }>>([
+    { time: 'T-20s', cpu: 12, memory: 28 },
+    { time: 'T-15s', cpu: 14, memory: 29 },
+    { time: 'T-10s', cpu: 13, memory: 28 },
+    { time: 'T-5s', cpu: 15, memory: 30 },
+  ]);
 
   const loadData = async () => {
     try {
@@ -45,6 +51,16 @@ export const OverviewPage: React.FC<OverviewPageProps> = ({
       setError(null);
       const data = await ApiService.getDashboardSummary();
       setSummary(data);
+
+      const now = new Date();
+      const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}`;
+      const cpuVal = Number((data.cpu_usage_pct || 0).toFixed(1));
+      const memVal = Number((data.memory_usage_pct || 0).toFixed(1));
+
+      setTelemetryHistory((prev) => {
+        const next = [...prev, { time: timeStr, cpu: cpuVal, memory: memVal }];
+        return next.slice(-10);
+      });
     } catch (err: any) {
       setError(err.message || 'Failed to load summary');
     } finally {
@@ -57,15 +73,6 @@ export const OverviewPage: React.FC<OverviewPageProps> = ({
     const interval = setInterval(loadData, 5000);
     return () => clearInterval(interval);
   }, []);
-
-  const timelineData = [
-    { time: '10m ago', cpu: 12, memory: 28 },
-    { time: '8m ago', cpu: 18, memory: 31 },
-    { time: '6m ago', cpu: 15, memory: 29 },
-    { time: '4m ago', cpu: 25, memory: 35 },
-    { time: '2m ago', cpu: 20, memory: 32 },
-    { time: 'Now', cpu: summary?.cpu_usage_pct || 14, memory: summary?.memory_usage_pct || 30 },
-  ];
 
   const successRate = summary?.success_rate ?? 100;
 
@@ -229,6 +236,10 @@ export const OverviewPage: React.FC<OverviewPageProps> = ({
               <p className="text-xs text-slate-400">Live container and host CPU/RAM percentage distribution</p>
             </div>
             <div className="flex items-center gap-3 text-xs font-mono">
+              <span className="inline-flex items-center gap-1 text-[10px] text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">
+                <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                Live Stream
+              </span>
               <div className="flex items-center gap-1.5 text-indigo-400">
                 <span className="h-2 w-2 rounded-full bg-indigo-500 shadow-[0_0_8px_rgba(99,102,241,0.6)]" />
                 <span>CPU %</span>
@@ -242,7 +253,7 @@ export const OverviewPage: React.FC<OverviewPageProps> = ({
 
           <div className="h-64 w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={timelineData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+              <AreaChart data={telemetryHistory} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                 <defs>
                   <linearGradient id="colorCpu" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="5%" stopColor="#6366f1" stopOpacity={0.4} />

@@ -105,6 +105,12 @@ export class ApiService {
     return res.json();
   }
 
+  static async getExecutionStatus(id: string): Promise<Record<string, any>> {
+    const res = await fetch(`${API_BASE}/commands/execute/${id}`);
+    if (!res.ok) throw new Error(`Failed to get execution status: ${res.statusText}`);
+    return res.json();
+  }
+
   static async getSystemMetrics(): Promise<SystemMetrics> {
     const res = await fetch(`${API_BASE}/system/metrics`);
     if (!res.ok) throw new Error(`Failed to load metrics`);

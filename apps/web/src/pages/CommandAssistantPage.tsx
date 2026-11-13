@@ -408,6 +408,7 @@ export const CommandAssistantPage: React.FC = () => {
     try {
       setIsCancelling(true);
       await ApiService.cancelExecution(activeExecutionId);
+      await ApiService.getExecutionStatus(activeExecutionId).catch(() => null);
     } catch (err: any) {
       console.warn('Cancel failed:', err);
     } finally {
