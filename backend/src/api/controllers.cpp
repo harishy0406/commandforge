@@ -49,7 +49,8 @@ nlohmann::json ApiController::handleHealth() {
         {"docker_available", execution_engine_ ? execution_engine_->isDockerAvailable() : false},
         {"ai_provider", config_.ai_provider},
         {"ai_model", config_.ai_model},
-        {"has_ai_api_key", !config_.ai_api_key.empty()}
+        {"has_ai_api_key", !config_.ai_api_key.empty()},
+        {"active_ast_rules", risk_analyzer_ ? static_cast<int>(risk_analyzer_->getRuleCount()) : 21}
     };
 }
 
