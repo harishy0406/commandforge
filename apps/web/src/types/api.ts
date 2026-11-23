@@ -160,6 +160,7 @@ export interface BackendHealth {
   ai_provider: string;
   ai_model?: string;
   has_ai_api_key?: boolean;
+  active_ast_rules?: number;
 }
 
 export interface AIProviderPreset {

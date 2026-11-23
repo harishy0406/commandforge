@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Terminal,
   ShieldCheck,
@@ -12,12 +12,22 @@ import {
   Database,
   Sparkles,
 } from 'lucide-react';
+import { ApiService } from '../services/api';
+import { BackendHealth } from '../types/api';
 
 interface AboutModalProps {
   onClose: () => void;
 }
 
 export const AboutModal: React.FC<AboutModalProps> = ({ onClose }) => {
+  const [health, setHealth] = useState<BackendHealth | null>(null);
+
+  useEffect(() => {
+    ApiService.getHealth()
+      .then(setHealth)
+      .catch(() => null);
+  }, []);
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-md p-4 animate-in fade-in duration-150">
       <div className="w-full max-w-2xl rounded-2xl border border-slate-800 bg-slate-950 p-6 shadow-2xl space-y-5 animate-in zoom-in-95 duration-200 relative overflow-hidden">
@@ -36,6 +46,11 @@ export const AboutModal: React.FC<AboutModalProps> = ({ onClose }) => {
                 <span className="rounded-md bg-indigo-500/15 border border-indigo-500/30 px-2 py-0.5 text-[10px] font-mono text-indigo-300 font-semibold">
                   v1.0.0 C++20
                 </span>
+                {health && (
+                  <span className="rounded-md bg-emerald-500/15 border border-emerald-500/30 px-2 py-0.5 text-[10px] font-mono text-emerald-300 font-semibold">
+                    ● {health.status} ({health.active_ast_rules || 21} rules)
+                  </span>
+                )}
               </div>
               <p className="text-xs text-slate-400">
                 AI-Powered Linux Terminal Assistant & Sandboxed Execution Engine
@@ -63,7 +78,7 @@ export const AboutModal: React.FC<AboutModalProps> = ({ onClose }) => {
               <span>C++20 Engine</span>
             </div>
             <p className="text-[11px] text-slate-400 leading-relaxed font-sans">
-              Non-blocking asynchronous REST API, Drogon framework, sub-millisecond AST parser.
+              cpp-httplib C++20 REST API, sub-millisecond AST parser with {health?.active_ast_rules || 21} rules.
             </p>
           </div>
 
